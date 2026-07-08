@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+.next/
+out/
+*.tsbuildinfo
+
+# Environment & secrets — never commit these
+.env
+.env.local
+.env.*.local
+apps/api/.env
+apps/web/.env.local
+
+# Local uploads (dev file storage)
+.local-uploads/
+
+# OS & editor
+.DS_Store
+*.log
+.idea/
+.vscode/
+
+# CDK
+infra/cdk.out/

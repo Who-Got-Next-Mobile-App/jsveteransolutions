@@ -1,0 +1,22 @@
+{
+  "name": "veteran-success-network",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "infra"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=@vsn/web",
+    "dev:api": "npm run dev --workspace=@vsn/api",
+    "build": "npm run build --workspace=@vsn/web",
+    "build:api": "npm run build --workspace=@vsn/api",
+    "db:up": "docker compose up -d",
+    "db:migrate": "npm run migrate --workspace=@vsn/db",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.2"
+  }
+}
