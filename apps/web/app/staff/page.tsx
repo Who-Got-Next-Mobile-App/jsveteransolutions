@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AdminNav, StatCard } from "@/components/PortalShell";
 import { apiFetch, type DocumentsResponse, type StaffProfilesResponse, type StaffStatsResponse } from "@/lib/api";
-import { claimStageLabels } from "@/lib/mock-data";
+import { claimStageLabels } from "@/lib/claim-stages";
 import type { ClaimStage } from "@vsn/types";
 
 export default function AdminDashboard() {
@@ -44,7 +44,7 @@ export default function AdminDashboard() {
             value={String(stats?.documentsToReview ?? "—")}
             sub={stats?.urgentDocuments ? `${stats.urgentDocuments} urgent` : undefined}
           />
-          <StatCard label="Open Tasks" value="—" sub="Coming soon" />
+          <StatCard label="Open Tasks" value={String(stats?.openTasks ?? "—")} />
           <StatCard label="Revenue (MTD)" value="—" sub="Stripe coming soon" />
         </div>
 

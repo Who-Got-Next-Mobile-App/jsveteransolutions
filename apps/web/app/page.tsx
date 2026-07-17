@@ -6,7 +6,7 @@ import {
 } from "@/components/ClientExperienceSections";
 import { PublicFooter, PublicNav } from "@/components/PublicNav";
 import { CLIENT_EXPERIENCE_TITLE, clientExperienceTeaser } from "@/lib/client-experience";
-import { mockEducation, mockServices } from "@/lib/mock-data";
+import { servicePackages } from "@/lib/services-catalog";
 
 export default function HomePage() {
   return (
@@ -29,7 +29,7 @@ export default function HomePage() {
               <Link href="/book" className="btn-primary">
                 Schedule Consultation
               </Link>
-              <Link href="/portal" className="btn-secondary">
+              <Link href="/login?portal=client" className="btn-secondary">
                 Client Portal
               </Link>
             </div>
@@ -44,7 +44,7 @@ export default function HomePage() {
           plans, organized deliverables, and mock C&amp;P exam preparation.
         </p>
         <div className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {mockServices.map((service) => (
+          {servicePackages.map((service) => (
             <div key={service.id} className="card">
               <div className="text-lg font-bold text-[var(--navy-900)]">{service.name}</div>
               <div className="mt-1 text-xl font-bold text-[var(--gold-500)]">{service.price}</div>
@@ -110,27 +110,17 @@ export default function HomePage() {
       </section>
 
       <section className="mx-auto max-w-6xl px-4 py-16">
-        <div className="flex items-end justify-between gap-4">
+        <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <h2 className="text-2xl font-bold text-[var(--navy-900)]">Veteran Success Academy</h2>
-            <p className="mt-2 text-slate-600">Starter education library preview</p>
+            <p className="mt-2 text-slate-600">Education resources for your claim journey.</p>
           </div>
           <Link href="/education" className="btn-outline">
-            View all
+            View academy
           </Link>
         </div>
-        <div className="mt-8 grid gap-4 md:grid-cols-2">
-          {mockEducation.map((item) => (
-            <div key={item.title} className="card flex items-start justify-between gap-4">
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-wide text-[var(--gold-500)]">{item.category}</div>
-                <div className="mt-1 font-semibold text-[var(--navy-900)]">{item.title}</div>
-                <div className="mt-1 text-sm text-slate-500">
-                  {item.type} · {item.minutes} min
-                </div>
-              </div>
-            </div>
-          ))}
+        <div className="card mt-8 max-w-2xl text-sm text-slate-600">
+          Academy articles, checklists, and videos will appear here as your care team publishes them.
         </div>
       </section>
 

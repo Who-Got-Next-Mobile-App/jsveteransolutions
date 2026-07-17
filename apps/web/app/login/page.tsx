@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { LoginRedirectNotice } from "@/components/AuthGuard";
 import { COMPANY_NAME } from "@/lib/brand";
 import { portalHomeForRole, useAuth } from "@/lib/auth/AuthProvider";
-import { isCognitoConfigured, startCognitoLogin } from "@/lib/auth/cognito";
+import { isCognitoConfigured, startCognitoLogin, startCognitoSignup } from "@/lib/auth/cognito";
 import { DEV_PERSONAS, type PortalKind } from "@/lib/auth/types";
 
 function LoginContent() {
@@ -52,6 +52,15 @@ function LoginContent() {
     }
   }
 
+  async function handleCognitoSignup() {
+    setError(null);
+    try {
+      await startCognitoSignup();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to start Cognito signup");
+    }
+  }
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-100 px-4 py-12">
       <div className="w-full max-w-lg">
@@ -70,10 +79,15 @@ function LoginContent() {
 
         <div className="card space-y-6">
           {cognitoEnabled && (
-            <div>
+            <div className="space-y-3">
               <button type="button" onClick={handleCognitoLogin} className="btn-primary w-full">
                 Continue with secure login
               </button>
+              {portal === "client" && (
+                <button type="button" onClick={handleCognitoSignup} className="btn-outline w-full">
+                  Create client account
+                </button>
+              )}
               <p className="mt-2 text-center text-xs text-slate-500">Amazon Cognito email sign-in</p>
             </div>
           )}

@@ -1,5 +1,5 @@
 import type { ClaimStage } from "@vsn/types";
-import { claimStageLabels } from "@/lib/mock-data";
+import { claimStageLabels } from "@/lib/claim-stages";
 
 export { AdminNav, PortalNav } from "@/components/PortalNav";
 

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { PublicFooter, PublicNav } from "@/components/PublicNav";
-import { mockServices } from "@/lib/mock-data";
+import { servicePackages } from "@/lib/services-catalog";
 
 export default function BookPage() {
   return (
@@ -9,10 +9,27 @@ export default function BookPage() {
       <main className="mx-auto max-w-3xl px-4 py-12">
         <h1 className="text-3xl font-bold text-[var(--navy-900)]">Schedule Here</h1>
         <p className="mt-3 text-slate-600">
-          Select a package to schedule your consultation. Once confirmed, you'll receive secure access to your client portal, intake, and document upload center.
+          Create a secure client account, then book an open consultation slot from your portal. Staff publishes available
+          times; you book instantly.
         </p>
+
+        <div className="card mt-8">
+          <h2 className="font-bold text-[var(--navy-900)]">Ready to book?</h2>
+          <p className="mt-2 text-sm text-slate-600">
+            New clients register with email verification. Existing clients can jump straight into portal scheduling.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <Link href="/login?portal=client" className="btn-primary">
+              Create account / Sign in
+            </Link>
+            <Link href="/portal/appointments" className="btn-outline">
+              Go to portal appointments
+            </Link>
+          </div>
+        </div>
+
         <div className="mt-8 space-y-4">
-          {mockServices.map((service) => (
+          {servicePackages.map((service) => (
             <div key={service.id} className="card">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="flex-1">
@@ -20,9 +37,9 @@ export default function BookPage() {
                   <div className="mt-1 text-xl font-bold text-[var(--gold-500)]">{service.price}</div>
                   <p className="mt-2 text-sm text-slate-600">{service.description}</p>
                 </div>
-                <button type="button" className="btn-primary shrink-0">
+                <Link href="/login?portal=client&next=%2Fportal%2Fappointments" className="btn-primary shrink-0">
                   Book — {service.price}
-                </button>
+                </Link>
               </div>
             </div>
           ))}

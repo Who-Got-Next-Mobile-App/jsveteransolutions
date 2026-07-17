@@ -25,3 +25,9 @@ apps/web/.env.local
 
 # CDK
 infra/cdk.out/
+.vercel
+.env*
+
+# Deploy artifacts / local env dumps
+apps/api/lambda-deploy.zip
+apps/web/vercel.env.import

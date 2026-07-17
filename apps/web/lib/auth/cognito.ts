@@ -48,6 +48,27 @@ export async function startCognitoLogin() {
   window.location.href = `https://${domain}/oauth2/authorize?${params.toString()}`;
 }
 
+export async function startCognitoSignup() {
+  const domain = process.env.NEXT_PUBLIC_COGNITO_DOMAIN;
+  const clientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID;
+  if (!domain || !clientId) throw new Error("Cognito is not configured");
+
+  const { verifier, challenge } = await createPkcePair();
+  savePkceVerifier(verifier);
+
+  const params = new URLSearchParams({
+    client_id: clientId,
+    response_type: "code",
+    scope: "openid email profile",
+    redirect_uri: cognitoRedirectUri(),
+    code_challenge: challenge,
+    code_challenge_method: "S256",
+    screen_hint: "signup"
+  });
+
+  window.location.href = `https://${domain}/oauth2/authorize?${params.toString()}`;
+}
+
 function roleFromGroups(groups: string[] = []) {
   if (groups.includes("owner")) return "owner" as const;
   if (groups.includes("assistant")) return "assistant" as const;

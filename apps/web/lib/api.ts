@@ -5,6 +5,9 @@ import { getApiSession } from "@/lib/auth/api-session";
 function authHeaders(): Record<string, string> {
   const session = getApiSession();
   if (session?.mode === "cognito" && session.idToken) {
+    if (session.expiresAt && Date.now() > session.expiresAt) {
+      return {};
+    }
     return { Authorization: `Bearer ${session.idToken}` };
   }
 
@@ -22,7 +25,7 @@ function authHeaders(): Record<string, string> {
       "X-User-Sub": "dev-client-001",
       "X-User-Email": "client@example.com",
       "X-User-Role": "client",
-      "X-User-Name": "James Mitchell"
+      "X-User-Name": "Dev Client"
     };
   }
 
@@ -90,5 +93,98 @@ export interface StaffStatsResponse {
     activeClients: number;
     documentsToReview: number;
     urgentDocuments: number;
+    openTasks?: number;
   };
+}
+
+export interface TasksResponse {
+  tasks: Array<{
+    id: string;
+    clientProfileId: string;
+    title: string;
+    description?: string | null;
+    status: string;
+    visibility: string;
+    dueAt?: string | null;
+    completedAt?: string | null;
+    createdAt: string;
+  }>;
+}
+
+export interface ThreadsResponse {
+  threads: Array<{
+    id: string;
+    clientProfileId: string;
+    subject: string;
+    isClosed: boolean;
+    updatedAt: string;
+    createdAt: string;
+  }>;
+}
+
+export interface ThreadDetailResponse {
+  thread: {
+    id: string;
+    clientProfileId: string;
+    subject: string;
+    isClosed: boolean;
+  };
+  messages: Array<{
+    id: string;
+    senderUserId: string;
+    body: string;
+    createdAt: string;
+  }>;
+}
+
+export interface AvailabilityResponse {
+  slots: Array<{
+    id: string;
+    consultationType: string;
+    startsAt: string;
+    endsAt: string;
+    status: string;
+    notes?: string | null;
+  }>;
+}
+
+export interface AppointmentsResponse {
+  appointments: Array<{
+    id: string;
+    clientProfileId: string;
+    type: string;
+    scheduledStartAt?: string | null;
+    scheduledEndAt?: string | null;
+    attendanceStatus: string;
+    createdAt: string;
+  }>;
+}
+
+export interface AssignedResourcesResponse {
+  resources: Array<{
+    id: string;
+    status: string;
+    assignedAt: string;
+    completedAt?: string | null;
+    resource: {
+      id: string;
+      title: string;
+      type: string;
+      category: string;
+      description?: string | null;
+      estimatedMinutes?: number | null;
+      downloadableAssetUrl?: string | null;
+    };
+  }>;
+}
+
+export interface CatalogResourcesResponse {
+  resources: Array<{
+    id: string;
+    slug: string;
+    title: string;
+    type: string;
+    category: string;
+    description?: string | null;
+  }>;
 }

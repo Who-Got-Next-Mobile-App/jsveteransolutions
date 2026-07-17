@@ -2,7 +2,6 @@ import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import postgres from "postgres";
-import { applyMigrations } from "./migrator";
 
 function loadEnvFile(path: string) {
   if (!existsSync(path)) return;
@@ -17,15 +16,14 @@ function loadEnvFile(path: string) {
   }
 }
 
-const packageRoot = dirname(fileURLToPath(import.meta.url));
-const repoRoot = join(packageRoot, "../..");
+const scriptRoot = dirname(fileURLToPath(import.meta.url));
+const repoRoot = join(scriptRoot, "../../..");
 loadEnvFile(join(repoRoot, ".env"));
 loadEnvFile(join(repoRoot, "apps/api/.env"));
 
-const databaseUrl =
-  process.env.DATABASE_URL ?? "postgresql://jsvs:jsvs_dev_password@localhost:5432/jsvs";
+const { applyMigrations } = await import("@vsn/db");
 
-const migrationsDir = join(dirname(fileURLToPath(import.meta.url)), "migrations");
+const migrationsDir = join(repoRoot, "packages/db/src/migrations");
 const migrations = readdirSync(migrationsDir)
   .filter((name) => name.endsWith(".sql"))
   .sort()
@@ -34,8 +32,16 @@ const migrations = readdirSync(migrationsDir)
     sql: readFileSync(join(migrationsDir, name), "utf8")
   }));
 
-const sql = postgres(databaseUrl, { max: 1 });
-await applyMigrations(sql, migrations);
-await sql.end();
+async function main() {
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl) throw new Error("DATABASE_URL is required");
+  const sql = postgres(databaseUrl, { max: 1 });
+  await applyMigrations(sql, migrations);
+  await sql.end();
+  console.log("Migrations applied via schema_migrations ledger");
+}
 
-console.log(`Applied ${migrations.length} migration file(s) via schema_migrations ledger.`);
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

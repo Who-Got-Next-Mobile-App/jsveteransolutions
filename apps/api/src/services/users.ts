@@ -1,6 +1,6 @@
-import { count, desc, eq, inArray, sql } from "drizzle-orm";
-import { clientProfiles, documents, getDb, timelineEvents } from "@vsn/db";
-import type { ClaimStage } from "@vsn/types";
+import { count, desc, eq, inArray, or, sql } from "drizzle-orm";
+import { clientProfiles, documents, getDb, timelineEvents, userAccounts } from "@vsn/db";
+import type { ClaimStage, UserRole } from "@vsn/types";
 import type { AuthUser } from "../types";
 
 export async function findUserBySub(sub: string) {
@@ -84,15 +84,34 @@ export async function bootstrapClientProfile(authUser: AuthUser, userAccountId: 
   return profile;
 }
 
-export async function listProfilesForStaff() {
+export async function listProfilesForStaff(role: UserRole, staffUserId: string) {
   const db = getDb();
-  return db.select().from(clientProfiles).orderBy(desc(clientProfiles.updatedAt));
+  if (role === "owner") {
+    return db.select().from(clientProfiles).orderBy(desc(clientProfiles.updatedAt));
+  }
+
+  return db
+    .select()
+    .from(clientProfiles)
+    .where(
+      or(eq(clientProfiles.assignedAssistantUserId, staffUserId), eq(clientProfiles.assignedOwnerUserId, staffUserId))
+    )
+    .orderBy(desc(clientProfiles.updatedAt));
 }
 
 export async function getProfileById(profileId: string) {
   const db = getDb();
   const [profile] = await db.select().from(clientProfiles).where(eq(clientProfiles.id, profileId)).limit(1);
   return profile ?? null;
+}
+
+export function staffCanAccessProfile(
+  role: UserRole,
+  staffUserId: string,
+  profile: { assignedOwnerUserId: string | null; assignedAssistantUserId: string | null }
+) {
+  if (role === "owner") return true;
+  return profile.assignedOwnerUserId === staffUserId || profile.assignedAssistantUserId === staffUserId;
 }
 
 export async function updateProfileStage(profileId: string, stage: ClaimStage, actorUserId: string) {

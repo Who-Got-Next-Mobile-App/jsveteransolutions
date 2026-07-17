@@ -1,5 +1,5 @@
 import { PublicFooter, PublicNav } from "@/components/PublicNav";
-import { mockProviders, providerDisclaimer } from "@/lib/mock-data";
+import { PROVIDER_DIRECTORY_DISCLAIMER } from "@/lib/brand";
 
 export default function ProvidersPage() {
   return (
@@ -11,21 +11,10 @@ export default function ProvidersPage() {
           Independent resources for veterans. Not a marketplace — informational listings only.
         </p>
         <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-          {providerDisclaimer}
+          {PROVIDER_DIRECTORY_DISCLAIMER}
         </div>
-        <div className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {mockProviders.map((provider) => (
-            <div key={provider.name} className="card">
-              <div className="text-xs font-semibold uppercase text-[var(--gold-500)]">{provider.category}</div>
-              <h2 className="mt-1 text-lg font-bold">{provider.name}</h2>
-              <p className="mt-2 text-sm text-slate-600">{provider.description}</p>
-              <div className="mt-4 space-y-1 text-xs text-slate-500">
-                <div>States: {provider.states.join(", ")}</div>
-                <div>Mode: {provider.mode}</div>
-                {provider.discount && <div className="text-emerald-700">{provider.discount}</div>}
-              </div>
-            </div>
-          ))}
+        <div className="card mt-8 max-w-2xl text-sm text-slate-600">
+          Provider listings will be published here as JS Veteran Solutions expands its resource network.
         </div>
       </main>
       <PublicFooter />

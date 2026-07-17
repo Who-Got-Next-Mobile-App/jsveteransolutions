@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { PublicFooter, PublicNav } from "@/components/PublicNav";
-import { mockServices } from "@/lib/mock-data";
+import { servicePackages } from "@/lib/services-catalog";
 
 export default function ServicesPage() {
   return (
@@ -14,7 +14,7 @@ export default function ServicesPage() {
           package is structured to give veterans clarity, confidence, and actionable guidance.
         </p>
         <div className="mt-8 grid gap-6 md:grid-cols-2">
-          {mockServices.map((service) => (
+          {servicePackages.map((service) => (
             <div key={service.id} className="card">
               <h2 className="text-xl font-bold">{service.name}</h2>
               <div className="mt-2 text-2xl font-bold text-[var(--gold-500)]">{service.price}</div>

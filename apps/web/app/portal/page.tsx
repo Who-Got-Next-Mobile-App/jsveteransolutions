@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ClaimTracker, PortalNav, StatCard } from "@/components/PortalShell";
-import { claimStageLabels } from "@/lib/mock-data";
+import { claimStageLabels } from "@/lib/claim-stages";
 import { apiFetch, type PortalProfileResponse } from "@/lib/api";
 import type { ClaimStage } from "@vsn/types";
 

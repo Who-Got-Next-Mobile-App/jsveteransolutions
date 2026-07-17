@@ -3,7 +3,9 @@ import type { Context, Next } from "hono";
 import type { UserRole } from "@vsn/types";
 import type { AuthUser } from "../types";
 
-const devBypass = process.env.DEV_AUTH_BYPASS === "true";
+function isDevBypass() {
+  return process.env.DEV_AUTH_BYPASS === "true";
+}
 
 let verifier: ReturnType<typeof CognitoJwtVerifier.create> | null = null;
 
@@ -29,7 +31,7 @@ function roleFromGroups(groups: string[] = []): UserRole {
 }
 
 export async function authMiddleware(c: Context, next: Next) {
-  if (devBypass) {
+  if (isDevBypass()) {
     const sub = c.req.header("x-user-sub") ?? "dev-client-001";
     const email = c.req.header("x-user-email") ?? "client@example.com";
     const role = (c.req.header("x-user-role") ?? "client") as UserRole;

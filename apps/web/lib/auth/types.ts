@@ -27,15 +27,15 @@ export const DEV_PERSONAS: DevPersona[] = [
     sub: "dev-client-001",
     email: "client@example.com",
     role: "client",
-    name: "James Mitchell",
-    label: "Demo Client",
-    description: "Upload documents and track claim progress."
+    name: "Dev Client",
+    label: "Local Dev Client",
+    description: "Upload documents and track claim progress (local development only)."
   },
   {
     sub: "dev-owner-001",
-    email: "owner@jsveteransolutions.com",
+    email: "dr.lee@jsveteransolutions.com",
     role: "owner",
-    name: "Dr. Provider",
+    name: "Dr. Lee",
     label: "Owner / Provider",
     description: "Full access to all clients, documents, and operations."
   },

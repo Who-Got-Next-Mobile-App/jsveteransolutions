@@ -1,5 +1,6 @@
 import * as cdk from "aws-cdk-lib";
 import * as apigwv2 from "aws-cdk-lib/aws-apigatewayv2";
+import * as apigwAuthorizers from "aws-cdk-lib/aws-apigatewayv2-authorizers";
 import * as apigwIntegrations from "aws-cdk-lib/aws-apigatewayv2-integrations";
 import * as cognito from "aws-cdk-lib/aws-cognito";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
@@ -13,6 +14,14 @@ import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import { Construct } from "constructs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+
+const PRODUCTION_ORIGINS = [
+  "http://localhost:3000",
+  "http://localhost:3001",
+  "https://jsveteransolutions-web.vercel.app",
+  "https://jsveteransolutions.com",
+  "https://www.jsveteransolutions.com"
+];
 
 export class BackendStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -64,6 +73,26 @@ export class BackendStack extends cdk.Stack {
       databaseName: "jsvs"
     });
 
+    const postConfirmationFn = new lambda.Function(this, "PostConfirmationFn", {
+      runtime: lambda.Runtime.NODEJS_20_X,
+      handler: "index.handler",
+      code: lambda.Code.fromInline(`
+const { CognitoIdentityProviderClient, AdminAddUserToGroupCommand } = require("@aws-sdk/client-cognito-identity-provider");
+const client = new CognitoIdentityProviderClient({});
+exports.handler = async (event) => {
+  if (event.triggerSource === "PostConfirmation_ConfirmSignUp") {
+    await client.send(new AdminAddUserToGroupCommand({
+      UserPoolId: event.userPoolId,
+      Username: event.userName,
+      GroupName: "client"
+    }));
+  }
+  return event;
+};
+`),
+      timeout: cdk.Duration.seconds(10)
+    });
+
     const userPool = new cognito.UserPool(this, "UserPool", {
       userPoolName: "jsvs-users",
       selfSignUpEnabled: true,
@@ -80,8 +109,17 @@ export class BackendStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.RETAIN
     });
 
+    userPool.addTrigger(cognito.UserPoolOperation.POST_CONFIRMATION, postConfirmationFn);
+
+    postConfirmationFn.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ["cognito-idp:AdminAddUserToGroup"],
+        resources: [`arn:aws:cognito-idp:${this.region}:${this.account}:userpool/*`]
+      })
+    );
+
     const userPoolDomain = userPool.addDomain("AuthDomain", {
-      cognitoDomain: { domainPrefix: "jsvs-auth" }
+      cognitoDomain: { domainPrefix: `jsvs-auth-${this.account}` }
     });
 
     const userPoolClient = userPool.addClient("WebClient", {
@@ -91,9 +129,18 @@ export class BackendStack extends cdk.Stack {
         scopes: [cognito.OAuthScope.OPENID, cognito.OAuthScope.EMAIL, cognito.OAuthScope.PROFILE],
         callbackUrls: [
           "http://localhost:3000/auth/callback",
-          "http://localhost:3001/auth/callback"
+          "http://localhost:3001/auth/callback",
+          "https://jsveteransolutions.com/auth/callback",
+          "https://www.jsveteransolutions.com/auth/callback",
+          "https://jsveteransolutions-web.vercel.app/auth/callback"
         ],
-        logoutUrls: ["http://localhost:3000", "http://localhost:3001"]
+        logoutUrls: [
+          "http://localhost:3000",
+          "http://localhost:3001",
+          "https://jsveteransolutions.com",
+          "https://www.jsveteransolutions.com",
+          "https://jsveteransolutions-web.vercel.app"
+        ]
       }
     });
 
@@ -118,7 +165,9 @@ export class BackendStack extends cdk.Stack {
         COGNITO_USER_POOL_ID: userPool.userPoolId,
         COGNITO_CLIENT_ID: userPoolClient.userPoolClientId,
         AWS_NODEJS_CONNECTION_REUSE_ENABLED: "1",
-        DEV_AUTH_BYPASS: "false"
+        DEV_AUTH_BYPASS: "false",
+        RUN_MIGRATIONS: "true",
+        CORS_ORIGIN: PRODUCTION_ORIGINS.join(",")
       },
       logRetention: logs.RetentionDays.ONE_MONTH
     });
@@ -133,17 +182,17 @@ export class BackendStack extends cdk.Stack {
       corsPreflight: {
         allowHeaders: ["Authorization", "Content-Type"],
         allowMethods: [apigwv2.CorsHttpMethod.ANY],
-        allowOrigins: ["http://localhost:3000", "http://localhost:3001"]
+        allowOrigins: PRODUCTION_ORIGINS
       }
     });
 
-    const authorizer = new apigwv2.HttpAuthorizer(this, "CognitoAuthorizer", {
-      httpApi,
-      type: apigwv2.HttpAuthorizerType.JWT,
-      identitySource: ["$request.header.Authorization"],
-      jwtAudience: [userPoolClient.userPoolClientId],
-      jwtIssuer: `https://cognito-idp.${this.region}.amazonaws.com/${userPool.userPoolId}`
-    });
+    const authorizer = new apigwAuthorizers.HttpJwtAuthorizer(
+      "CognitoAuthorizer",
+      `https://cognito-idp.${this.region}.amazonaws.com/${userPool.userPoolId}`,
+      {
+        jwtAudience: [userPoolClient.userPoolClientId]
+      }
+    );
 
     httpApi.addRoutes({
       path: "/{proxy+}",

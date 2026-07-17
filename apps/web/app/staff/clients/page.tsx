@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AdminNav } from "@/components/PortalShell";
 import { apiFetch, type StaffProfilesResponse } from "@/lib/api";
-import { claimStageLabels } from "@/lib/mock-data";
+import { claimStageLabels } from "@/lib/claim-stages";
 import type { ClaimStage } from "@vsn/types";
 
 export default function AdminClientsPage() {

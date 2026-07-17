@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { PublicFooter, PublicNav } from "@/components/PublicNav";
 import { COMPANY_NAME } from "@/lib/brand";
-import { mockServices } from "@/lib/mock-data";
+import { servicePackages } from "@/lib/services-catalog";
 
 export default function PricingPage() {
   return (
@@ -21,7 +21,7 @@ export default function PricingPage() {
               </tr>
             </thead>
             <tbody>
-              {mockServices.map((service) => (
+              {servicePackages.map((service) => (
                 <tr key={service.id} className="border-t border-slate-100">
                   <td className="px-6 py-4 font-medium">{service.name}</td>
                   <td className="px-6 py-4 font-bold text-[var(--gold-500)]">{service.price}</td>
