@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { portalHomeForRole } from "@/lib/auth/AuthProvider";
 import { completeCognitoLogin } from "@/lib/auth/cognito";
-import { saveSession } from "@/lib/auth/storage";
+import { clearPendingInviteToken, clearSession, loadPendingInviteToken, saveSession } from "@/lib/auth/storage";
 import { setApiSession } from "@/lib/auth/api-session";
 import { apiFetch } from "@/lib/api";
 
@@ -13,6 +13,7 @@ function CallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState("Completing secure sign-in...");
 
   useEffect(() => {
     const code = searchParams.get("code");
@@ -26,6 +27,23 @@ function CallbackContent() {
         saveSession(session);
         setApiSession(session);
         await apiFetch("/v1/session/bootstrap", { method: "POST", body: "{}" });
+
+        const inviteToken = loadPendingInviteToken();
+        if (inviteToken) {
+          setMessage("Activating provider access...");
+          try {
+            await apiFetch(`/v1/invites/${inviteToken}/redeem`, { method: "POST", body: "{}" });
+            clearPendingInviteToken();
+            clearSession();
+            setApiSession(null);
+            router.replace("/login?portal=staff&upgraded=1");
+            return;
+          } catch (err) {
+            clearPendingInviteToken();
+            throw err;
+          }
+        }
+
         router.replace(portalHomeForRole(session.role));
       })
       .catch((err) => {
@@ -49,7 +67,7 @@ function CallbackContent() {
 
   return (
     <div className="flex min-h-screen items-center justify-center text-slate-600">
-      Completing secure sign-in...
+      {message}
     </div>
   );
 }

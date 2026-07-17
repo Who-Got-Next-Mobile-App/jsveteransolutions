@@ -33,19 +33,19 @@ export default function AdminDashboard() {
     <div className="flex min-h-screen bg-slate-100">
       <AdminNav />
       <main className="flex-1 p-6 md:p-8">
-        <h1 className="text-2xl font-bold text-[var(--navy-900)]">Operations Dashboard</h1>
-        <p className="text-slate-600">Owner and assistant view — live data from the JSVS API.</p>
+        <h1 className="text-2xl font-bold text-[var(--navy-900)]">Provider Dashboard</h1>
+        <p className="text-slate-600">Your caseload and operations — live data from the JSVS API.</p>
         {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
 
         <div className="mt-6 grid gap-4 md:grid-cols-4">
-          <StatCard label="Active Clients" value={String(stats?.activeClients ?? "—")} />
+          <StatCard label="My Open Clients" value={String(stats?.activeClients ?? "—")} />
+          <StatCard label="Unassigned" value={String(stats?.unassignedClients ?? "—")} />
           <StatCard
             label="Documents to Review"
             value={String(stats?.documentsToReview ?? "—")}
             sub={stats?.urgentDocuments ? `${stats.urgentDocuments} urgent` : undefined}
           />
           <StatCard label="Open Tasks" value={String(stats?.openTasks ?? "—")} />
-          <StatCard label="Revenue (MTD)" value="—" sub="Stripe coming soon" />
         </div>
 
         <div className="mt-8 grid gap-6 lg:grid-cols-2">

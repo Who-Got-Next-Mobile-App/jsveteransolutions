@@ -172,6 +172,13 @@ exports.handler = async (event) => {
       logRetention: logs.RetentionDays.ONE_MONTH
     });
 
+    apiFunction.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ["cognito-idp:AdminAddUserToGroup", "cognito-idp:AdminRemoveUserFromGroup"],
+        resources: [`arn:aws:cognito-idp:${this.region}:${this.account}:userpool/*`]
+      })
+    );
+
     documentsBucket.grantReadWrite(apiFunction);
     documentsKey.grantEncryptDecrypt(apiFunction);
     dbSecret.grantRead(apiFunction);
@@ -205,6 +212,12 @@ exports.handler = async (event) => {
       path: "/health",
       methods: [apigwv2.HttpMethod.GET],
       integration: new apigwIntegrations.HttpLambdaIntegration("HealthIntegration", apiFunction)
+    });
+
+    httpApi.addRoutes({
+      path: "/v1/invites/{token}",
+      methods: [apigwv2.HttpMethod.GET],
+      integration: new apigwIntegrations.HttpLambdaIntegration("InvitePreviewIntegration", apiFunction)
     });
 
     new cdk.CfnOutput(this, "ApiUrl", { value: httpApi.apiEndpoint });

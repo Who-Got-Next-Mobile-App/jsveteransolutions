@@ -14,14 +14,26 @@ import {
 } from "./services/documents";
 import {
   bootstrapClientProfile,
+  claimClientProfile,
   findProfileByUserId,
   getProfileById,
   getStaffStats,
+  listActiveProviders,
   listProfilesForStaff,
+  listUnassignedProfiles,
+  reassignClientProfile,
+  setAcceptingClients,
   staffCanAccessProfile,
   updateProfileStage,
   upsertUserFromAuth
 } from "./services/users";
+import {
+  createProviderInvite,
+  listProviderInvites,
+  previewInvite,
+  redeemProviderInvite,
+  revokeProviderInvite
+} from "./services/invites";
 import {
   assertClientProfileExists,
   countOpenTasks,
@@ -121,6 +133,12 @@ export function createApp() {
     return c.json({ ok: true, key: decodedKey });
   });
 
+  app.get("/v1/invites/:token", async (c) => {
+    const preview = await previewInvite(c.req.param("token"));
+    if (!preview) return c.json({ error: "Invite not found" }, 404);
+    return c.json({ invite: preview });
+  });
+
   app.use("/v1/*", authMiddleware);
 
   app.post("/v1/session/bootstrap", async (c) => {
@@ -147,7 +165,9 @@ export function createApp() {
   });
 
   app.get("/v1/staff/stats", requireRoles("owner", "assistant"), async (c) => {
-    const stats = await getStaffStats();
+    const authUser = c.get("user");
+    const user = await upsertUserFromAuth(authUser);
+    const stats = await getStaffStats(user.role, user.id);
     const openTasks = await countOpenTasks();
     return c.json({ stats: { ...stats, openTasks } });
   });
@@ -702,6 +722,104 @@ export function createApp() {
         resource: row.resource
       }))
     });
+  });
+
+  app.get("/v1/staff/invites", requireRoles("owner", "assistant"), async (c) => {
+    return c.json({ invites: await listProviderInvites() });
+  });
+
+  app.post("/v1/staff/invites", requireRoles("owner", "assistant"), async (c) => {
+    const body = z.object({ email: z.string().email() }).parse(await c.req.json());
+    const authUser = c.get("user");
+    const user = await upsertUserFromAuth(authUser);
+    try {
+      const invite = await createProviderInvite({ email: body.email, invitedByUserId: user.id });
+      return c.json({ invite });
+    } catch (error) {
+      return c.json({ error: error instanceof Error ? error.message : "Unable to create invite" }, 400);
+    }
+  });
+
+  app.post("/v1/staff/invites/:id/revoke", requireRoles("owner", "assistant"), async (c) => {
+    const invite = await revokeProviderInvite(c.req.param("id"));
+    if (!invite) return c.json({ error: "Invite not found" }, 404);
+    return c.json({ invite });
+  });
+
+  app.post("/v1/invites/:token/redeem", async (c) => {
+    const authUser = c.get("user");
+    const user = await upsertUserFromAuth(authUser);
+    try {
+      const result = await redeemProviderInvite({
+        token: c.req.param("token"),
+        userId: user.id,
+        email: authUser.email,
+        cognitoUsername: authUser.sub
+      });
+      return c.json(result);
+    } catch (error) {
+      return c.json({ error: error instanceof Error ? error.message : "Unable to redeem invite" }, 400);
+    }
+  });
+
+  app.get("/v1/staff/me", requireRoles("owner", "assistant"), async (c) => {
+    const authUser = c.get("user");
+    const user = await upsertUserFromAuth(authUser);
+    return c.json({
+      user: {
+        id: user.id,
+        email: user.email,
+        displayName: user.displayName,
+        role: user.role,
+        acceptingClients: user.acceptingClients
+      }
+    });
+  });
+
+  app.patch("/v1/staff/me/availability", requireRoles("owner", "assistant"), async (c) => {
+    const body = z.object({ acceptingClients: z.boolean() }).parse(await c.req.json());
+    const authUser = c.get("user");
+    const user = await upsertUserFromAuth(authUser);
+    const updated = await setAcceptingClients(user.id, body.acceptingClients);
+    return c.json({ user: updated });
+  });
+
+  app.get("/v1/staff/clients/unassigned", requireRoles("owner", "assistant"), async (c) => {
+    return c.json({ profiles: await listUnassignedProfiles() });
+  });
+
+  app.get("/v1/staff/providers", requireRoles("owner", "assistant"), async (c) => {
+    return c.json({ providers: await listActiveProviders() });
+  });
+
+  app.post("/v1/staff/clients/:id/claim", requireRoles("owner", "assistant"), async (c) => {
+    const authUser = c.get("user");
+    const user = await upsertUserFromAuth(authUser);
+    try {
+      const profile = await claimClientProfile(c.req.param("id"), user.id, user.role);
+      if (!profile) return c.json({ error: "Profile not found" }, 404);
+      return c.json({ profile });
+    } catch (error) {
+      return c.json({ error: error instanceof Error ? error.message : "Unable to claim client" }, 400);
+    }
+  });
+
+  app.post("/v1/staff/clients/:id/reassign", requireRoles("owner", "assistant"), async (c) => {
+    const body = z.object({ toProviderUserId: z.string().uuid() }).parse(await c.req.json());
+    const authUser = c.get("user");
+    const user = await upsertUserFromAuth(authUser);
+    try {
+      const profile = await reassignClientProfile({
+        profileId: c.req.param("id"),
+        toProviderUserId: body.toProviderUserId,
+        actorUserId: user.id,
+        actorRole: user.role
+      });
+      if (!profile) return c.json({ error: "Profile not found" }, 404);
+      return c.json({ profile });
+    } catch (error) {
+      return c.json({ error: error instanceof Error ? error.message : "Unable to reassign client" }, 400);
+    }
   });
 
   app.onError((err, c) => {

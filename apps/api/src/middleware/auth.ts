@@ -31,6 +31,11 @@ function roleFromGroups(groups: string[] = []): UserRole {
 }
 
 export async function authMiddleware(c: Context, next: Next) {
+  if (c.req.method === "GET" && /^\/v1\/invites\/[^/]+$/.test(c.req.path)) {
+    await next();
+    return;
+  }
+
   if (isDevBypass()) {
     const sub = c.req.header("x-user-sub") ?? "dev-client-001";
     const email = c.req.header("x-user-email") ?? "client@example.com";

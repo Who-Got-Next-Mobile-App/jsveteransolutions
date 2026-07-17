@@ -60,6 +60,8 @@ export interface PortalProfileResponse {
     lastName: string;
     email: string;
     currentStage: string;
+    assignedAssistantUserId?: string | null;
+    assignedOwnerUserId?: string | null;
   };
   timeline: Array<{ id: string; summary: string; createdAt: string }>;
 }
@@ -91,9 +93,41 @@ export interface StaffProfilesResponse {
 export interface StaffStatsResponse {
   stats: {
     activeClients: number;
+    unassignedClients?: number;
     documentsToReview: number;
     urgentDocuments: number;
     openTasks?: number;
+  };
+}
+
+export interface ProviderInvitesResponse {
+  invites: Array<{
+    id: string;
+    email: string;
+    token: string;
+    status: string;
+    expiresAt: string;
+    createdAt: string;
+  }>;
+}
+
+export interface StaffProvidersResponse {
+  providers: Array<{
+    id: string;
+    email: string;
+    displayName: string;
+    role: string;
+    acceptingClients: boolean;
+  }>;
+}
+
+export interface StaffMeResponse {
+  user: {
+    id: string;
+    email: string;
+    displayName: string;
+    role: string;
+    acceptingClients: boolean;
   };
 }
 

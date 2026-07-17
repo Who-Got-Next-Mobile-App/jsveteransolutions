@@ -16,7 +16,7 @@ function SidebarUser({ variant }: { variant: "portal" | "staff" }) {
       {session && (
         <div className={`mb-3 text-xs ${variant === "staff" ? "text-slate-400" : "text-slate-500"}`}>
           <div className="font-medium">{session.displayName}</div>
-          <div className="capitalize">{session.role}</div>
+          <div className="capitalize">{session.role === "assistant" ? "provider" : session.role}</div>
         </div>
       )}
       <button
@@ -73,6 +73,7 @@ export function AdminNav() {
   const links: NavLink[] = [
     { href: "/staff", label: "Dashboard" },
     { href: "/staff/clients", label: "Clients" },
+    { href: "/staff/team", label: "Team" },
     { href: "/staff/documents", label: "Document Queue" },
     { href: "/staff/tasks", label: "Tasks" },
     { href: "/staff/messages", label: "Messages" },
@@ -84,7 +85,7 @@ export function AdminNav() {
   return (
     <aside className="w-56 shrink-0 border-r border-slate-200 bg-[var(--navy-950)] p-4 text-slate-300">
       <div className="mb-6">
-        <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Staff Portal</div>
+        <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Provider Portal</div>
         <div className="mt-1 font-bold text-white">Operations</div>
       </div>
       <nav className="flex flex-col gap-1">

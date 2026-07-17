@@ -54,6 +54,8 @@ export const userAccounts = pgTable("user_accounts", {
   role: userRoleEnum("role").notNull().default("client"),
   displayName: varchar("display_name", { length: 200 }).notNull(),
   isActive: boolean("is_active").notNull().default(true),
+  acceptingClients: boolean("accepting_clients").notNull().default(true),
+  lastClientAssignedAt: timestamp("last_client_assigned_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   lastLoginAt: timestamp("last_login_at", { withTimezone: true })
 });
@@ -282,4 +284,26 @@ export const assignedResources = pgTable("assigned_resources", {
   status: assignedResourceStatusEnum("status").notNull().default("assigned"),
   assignedAt: timestamp("assigned_at", { withTimezone: true }).notNull().defaultNow(),
   completedAt: timestamp("completed_at", { withTimezone: true })
+});
+
+export const providerInviteStatusEnum = pgEnum("provider_invite_status", [
+  "pending",
+  "accepted",
+  "revoked",
+  "expired"
+]);
+
+export const providerInvites = pgTable("provider_invites", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  email: varchar("email", { length: 320 }).notNull(),
+  token: varchar("token", { length: 128 }).notNull().unique(),
+  invitedByUserId: uuid("invited_by_user_id")
+    .notNull()
+    .references(() => userAccounts.id),
+  status: providerInviteStatusEnum("status").notNull().default("pending"),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  acceptedAt: timestamp("accepted_at", { withTimezone: true }),
+  acceptedUserId: uuid("accepted_user_id").references(() => userAccounts.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
 });

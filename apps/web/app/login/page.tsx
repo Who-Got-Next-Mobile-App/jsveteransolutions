@@ -18,6 +18,7 @@ function LoginContent() {
 
   const portal = (searchParams.get("portal") as PortalKind | null) ?? "client";
   const nextPath = searchParams.get("next");
+  const upgraded = searchParams.get("upgraded") === "1";
   const devAuthEnabled = process.env.NEXT_PUBLIC_DEV_AUTH === "true";
   const cognitoEnabled = isCognitoConfigured();
 
@@ -67,13 +68,18 @@ function LoginContent() {
         <div className="mb-6 text-center">
           <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">{COMPANY_NAME}</div>
           <h1 className="mt-2 text-3xl font-bold text-[var(--navy-900)]">
-            {portal === "staff" ? "Staff Sign In" : "Client Portal Sign In"}
+            {portal === "staff" ? "Provider Sign In" : "Client Portal Sign In"}
           </h1>
           <p className="mt-2 text-slate-600">
             {portal === "staff"
-              ? "Secure access for providers and assistants."
+              ? "Secure access for claim consultants and care-team providers."
               : "Secure access to your documents and claim progress."}
           </p>
+          {upgraded && (
+            <p className="mt-2 text-sm text-emerald-700">
+              Provider access activated. Sign in again to load your updated permissions.
+            </p>
+          )}
           <LoginRedirectNotice />
         </div>
 
@@ -87,6 +93,11 @@ function LoginContent() {
                 <button type="button" onClick={handleCognitoSignup} className="btn-outline w-full">
                   Create client account
                 </button>
+              )}
+              {portal === "staff" && (
+                <p className="text-center text-xs text-slate-500">
+                  New providers need an invite link from the team. Ask an existing provider to invite you.
+                </p>
               )}
               <p className="mt-2 text-center text-xs text-slate-500">Amazon Cognito email sign-in</p>
             </div>

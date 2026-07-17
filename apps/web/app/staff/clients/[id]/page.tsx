@@ -10,6 +10,7 @@ import {
   type CatalogResourcesResponse,
   type DocumentsResponse,
   type PortalProfileResponse,
+  type StaffProvidersResponse,
   type TasksResponse,
   type ThreadsResponse
 } from "@/lib/api";
@@ -26,10 +27,12 @@ export default function StaffClientDetailPage() {
   const [threads, setThreads] = useState<ThreadsResponse["threads"]>([]);
   const [assignedResources, setAssignedResources] = useState<AssignedResourcesResponse["resources"]>([]);
   const [catalog, setCatalog] = useState<CatalogResourcesResponse["resources"]>([]);
+  const [providers, setProviders] = useState<StaffProvidersResponse["providers"]>([]);
   const [taskTitle, setTaskTitle] = useState("");
   const [messageSubject, setMessageSubject] = useState("");
   const [messageBody, setMessageBody] = useState("");
   const [resourceId, setResourceId] = useState("");
+  const [reassignTo, setReassignTo] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [savingStage, setSavingStage] = useState(false);
 
@@ -40,14 +43,16 @@ export default function StaffClientDetailPage() {
       tasksResponse,
       threadsResponse,
       assignedResponse,
-      catalogResponse
+      catalogResponse,
+      providersResponse
     ] = await Promise.all([
       apiFetch<PortalProfileResponse>(`/v1/profiles/${params.id}`),
       apiFetch<DocumentsResponse>(`/v1/profiles/${params.id}/documents`),
       apiFetch<TasksResponse>(`/v1/staff/tasks?clientProfileId=${params.id}`),
       apiFetch<ThreadsResponse>(`/v1/staff/messages?clientProfileId=${params.id}`),
       apiFetch<AssignedResourcesResponse>(`/v1/staff/clients/${params.id}/resources`),
-      apiFetch<CatalogResourcesResponse>("/v1/staff/resources")
+      apiFetch<CatalogResourcesResponse>("/v1/staff/resources"),
+      apiFetch<StaffProvidersResponse>("/v1/staff/providers")
     ]);
     setData(profileResponse);
     setDocuments(documentsResponse.documents);
@@ -55,7 +60,9 @@ export default function StaffClientDetailPage() {
     setThreads(threadsResponse.threads);
     setAssignedResources(assignedResponse.resources);
     setCatalog(catalogResponse.resources);
+    setProviders(providersResponse.providers);
     if (!resourceId && catalogResponse.resources[0]) setResourceId(catalogResponse.resources[0].id);
+    if (!reassignTo && providersResponse.providers[0]) setReassignTo(providersResponse.providers[0].id);
   }
 
   useEffect(() => {
@@ -120,8 +127,33 @@ export default function StaffClientDetailPage() {
     }
   }
 
+  async function claimClient() {
+    setError(null);
+    try {
+      await apiFetch(`/v1/staff/clients/${params.id}/claim`, { method: "POST", body: "{}" });
+      await loadProfile();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to claim client");
+    }
+  }
+
+  async function reassignClient(event: FormEvent) {
+    event.preventDefault();
+    setError(null);
+    try {
+      await apiFetch(`/v1/staff/clients/${params.id}/reassign`, {
+        method: "POST",
+        body: JSON.stringify({ toProviderUserId: reassignTo })
+      });
+      await loadProfile();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to reassign client");
+    }
+  }
+
   const profile = data?.profile;
   const stage = (profile?.currentStage ?? "intake_received") as ClaimStage;
+  const isUnassigned = !profile?.assignedAssistantUserId && !profile?.assignedOwnerUserId;
 
   return (
     <div className="flex min-h-screen bg-slate-100">
@@ -134,6 +166,37 @@ export default function StaffClientDetailPage() {
           {profile ? `${profile.firstName} ${profile.lastName}` : "Client Profile"}
         </h1>
         {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+
+        <div className="card mt-6 max-w-xl space-y-3">
+          <h2 className="font-bold">Assignment</h2>
+          <p className="text-sm text-slate-600">
+            {isUnassigned
+              ? "This client is unassigned."
+              : `Assigned provider id: ${profile?.assignedAssistantUserId ?? profile?.assignedOwnerUserId}`}
+          </p>
+          {isUnassigned ? (
+            <button type="button" className="btn-primary" onClick={claimClient}>
+              Claim this client
+            </button>
+          ) : (
+            <form onSubmit={reassignClient} className="flex flex-wrap gap-2">
+              <select
+                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                value={reassignTo}
+                onChange={(event) => setReassignTo(event.target.value)}
+              >
+                {providers.map((provider) => (
+                  <option key={provider.id} value={provider.id}>
+                    {provider.displayName} ({provider.role === "assistant" ? "provider" : provider.role})
+                  </option>
+                ))}
+              </select>
+              <button type="submit" className="btn-outline">
+                Reassign
+              </button>
+            </form>
+          )}
+        </div>
 
         <div className="mt-6 grid gap-6 lg:grid-cols-2">
           <div className="card">

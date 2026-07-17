@@ -5,6 +5,7 @@ import { applyMigrations } from "@vsn/db";
 import { createApp } from "./app";
 import initialMigrationSql from "../../../packages/db/src/migrations/001_initial.sql";
 import portalFeaturesMigrationSql from "../../../packages/db/src/migrations/002_native_portal_features.sql";
+import providerSelfServeMigrationSql from "../../../packages/db/src/migrations/003_provider_self_serve.sql";
 
 let migrated = false;
 
@@ -19,7 +20,8 @@ async function ensureMigrated() {
   try {
     await applyMigrations(sql, [
       { id: "001_initial", sql: initialMigrationSql },
-      { id: "002_native_portal_features", sql: portalFeaturesMigrationSql }
+      { id: "002_native_portal_features", sql: portalFeaturesMigrationSql },
+      { id: "003_provider_self_serve", sql: providerSelfServeMigrationSql }
     ]);
     migrated = true;
   } finally {

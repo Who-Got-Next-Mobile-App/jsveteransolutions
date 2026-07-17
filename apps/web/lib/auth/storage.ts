@@ -38,3 +38,17 @@ export function loadPkceVerifier() {
 export function clearPkceVerifier() {
   window.sessionStorage.removeItem(PKCE_KEY);
 }
+
+const INVITE_KEY = "jsvs.provider.invite";
+
+export function savePendingInviteToken(token: string) {
+  window.sessionStorage.setItem(INVITE_KEY, token);
+}
+
+export function loadPendingInviteToken() {
+  return window.sessionStorage.getItem(INVITE_KEY);
+}
+
+export function clearPendingInviteToken() {
+  window.sessionStorage.removeItem(INVITE_KEY);
+}
