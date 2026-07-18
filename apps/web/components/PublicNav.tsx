@@ -20,12 +20,15 @@ const portalLinks = [
   { href: "/login?portal=staff", label: "Provider Portal" }
 ];
 
+const desktopPrimaryLinks = publicLinks.slice(0, 4);
+const desktopMoreLinks = publicLinks.slice(4);
+
 export function PublicNav() {
   const [open, setOpen] = useState(false);
 
   return (
     <header className="border-b border-slate-200 bg-white">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-6 px-4 py-4">
+      <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-4">
         <Link href="/" className="flex shrink-0 items-center gap-2.5" onClick={() => setOpen(false)}>
           <Image
             src={BRAND_ASSETS.navMark}
@@ -37,43 +40,50 @@ export function PublicNav() {
           />
           <div className="min-w-0">
             <div className="truncate text-sm font-bold text-[var(--navy-900)]">{COMPANY_NAME}</div>
-            <div className="hidden truncate text-xs text-slate-500 sm:block">{COMPANY_TAGLINE}</div>
+            <div className="hidden truncate text-xs text-slate-500 lg:block">{COMPANY_TAGLINE}</div>
           </div>
         </Link>
 
-        <nav className="hidden min-w-0 items-center gap-5 xl:flex">
-          {publicLinks.map((link) => (
+        <nav className="ml-auto hidden shrink-0 items-center gap-4 xl:flex">
+          {desktopPrimaryLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
-              className="whitespace-nowrap text-sm font-medium text-slate-600 hover:text-[var(--navy-900)]"
+              className="shrink-0 whitespace-nowrap text-sm font-medium text-slate-600 hover:text-[var(--navy-900)]"
             >
               {link.label}
             </Link>
           ))}
-        </nav>
-
-        <div className="hidden shrink-0 items-center gap-4 xl:flex">
+          {desktopMoreLinks.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className="hidden shrink-0 whitespace-nowrap text-sm font-medium text-slate-600 hover:text-[var(--navy-900)] 2xl:inline"
+            >
+              {link.label}
+            </Link>
+          ))}
+          <span className="mx-1 hidden h-4 w-px bg-slate-200 2xl:inline-block" aria-hidden="true" />
           {portalLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
-              className="whitespace-nowrap text-sm font-medium text-slate-600 hover:text-[var(--navy-900)]"
+              className="shrink-0 whitespace-nowrap text-sm font-medium text-slate-600 hover:text-[var(--navy-900)]"
             >
               {link.label}
             </Link>
           ))}
-          <Link href="/book" className="btn-primary whitespace-nowrap">
+          <Link href="/book" className="btn-primary shrink-0 whitespace-nowrap">
             Book Online
           </Link>
-        </div>
+        </nav>
 
         <button
           type="button"
           aria-label="Toggle navigation menu"
           aria-expanded={open}
           onClick={() => setOpen((value) => !value)}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-[var(--navy-900)] xl:hidden"
+          className="ml-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-[var(--navy-900)] xl:hidden"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
             {open ? (
@@ -109,11 +119,7 @@ export function PublicNav() {
                 {link.label}
               </Link>
             ))}
-            <Link
-              href="/book"
-              onClick={() => setOpen(false)}
-              className="btn-primary mt-2 text-center"
-            >
+            <Link href="/book" onClick={() => setOpen(false)} className="btn-primary mt-2 text-center">
               Book Online
             </Link>
           </nav>
