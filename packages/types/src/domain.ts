@@ -286,6 +286,34 @@ export interface ProviderDirectoryEntry {
   updatedAt: string;
 }
 
+export type ReferralCategory = "realtor" | "attorney" | "educator" | "developer" | "other";
+export type ReferralSubmissionStatus = "pending" | "reviewed" | "archived";
+export type ReferralCommunicationPreference = "text" | "call" | "either";
+
+export interface ReferralContact {
+  name: string;
+  phone: string;
+}
+
+export interface ReferralSubmission {
+  id: string;
+  businessName: string;
+  category: ReferralCategory;
+  contacts: ReferralContact[];
+  communicationPreference: ReferralCommunicationPreference;
+  communicationNotes?: string;
+  services: string[];
+  serviceArea: string;
+  email?: string;
+  websiteUrl?: string;
+  notes?: string;
+  disclaimerAcceptedAt: string;
+  status: ReferralSubmissionStatus;
+  createdAt: string;
+  reviewedAt?: string;
+  reviewedByUserId?: string;
+}
+
 export interface TimelineEvent {
   id: string;
   clientProfileId: string;

@@ -222,3 +222,23 @@ export interface CatalogResourcesResponse {
     description?: string | null;
   }>;
 }
+
+export interface ReferralSubmissionsResponse {
+  submissions: Array<{
+    id: string;
+    businessName: string;
+    category: string;
+    contacts: Array<{ name: string; phone: string }>;
+    communicationPreference: string;
+    communicationNotes?: string;
+    services: string[];
+    serviceArea: string;
+    email?: string;
+    websiteUrl?: string;
+    notes?: string;
+    disclaimerAcceptedAt: string;
+    status: string;
+    createdAt: string;
+    reviewedAt?: string;
+  }>;
+}

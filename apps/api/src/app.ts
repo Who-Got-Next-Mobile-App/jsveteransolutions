@@ -67,6 +67,11 @@ import {
   listCatalogResources,
   updateAssignedResourceStatus
 } from "./services/resources";
+import {
+  createReferralSubmission,
+  listReferralSubmissions,
+  updateReferralSubmissionStatus
+} from "./services/referrals";
 import { getDb, timelineEvents } from "@vsn/db";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
@@ -137,6 +142,52 @@ export function createApp() {
     const preview = await previewInvite(c.req.param("token"));
     if (!preview) return c.json({ error: "Invite not found" }, 404);
     return c.json({ invite: preview });
+  });
+
+  const referralCategorySchema = z.enum(["realtor", "attorney", "educator", "developer", "other"]);
+  const referralStatusSchema = z.enum(["pending", "reviewed", "archived"]);
+  const referralCommunicationSchema = z.enum(["text", "call", "either"]);
+  const referralContactSchema = z.object({
+    name: z.string().trim().min(1).max(120),
+    phone: z.string().trim().min(7).max(32)
+  });
+
+  app.post("/v1/referrals", async (c) => {
+    const raw = await c.req.json();
+    if (JSON.stringify(raw).length > 20_000) {
+      return c.json({ error: "Submission is too large" }, 413);
+    }
+
+    const body = z
+      .object({
+        businessName: z.string().trim().min(2).max(200),
+        category: referralCategorySchema,
+        contacts: z.array(referralContactSchema).min(1).max(2),
+        communicationPreference: referralCommunicationSchema.default("either"),
+        communicationNotes: z.string().trim().max(1000).optional(),
+        services: z.array(z.string().trim().min(1).max(200)).min(1).max(40),
+        serviceArea: z.string().trim().min(2).max(1000),
+        email: z.string().trim().email().max(320).optional().or(z.literal("")),
+        websiteUrl: z.string().trim().url().max(500).optional().or(z.literal("")),
+        notes: z.string().trim().max(2000).optional(),
+        disclaimerAccepted: z.literal(true)
+      })
+      .parse(raw);
+
+    const submission = await createReferralSubmission({
+      businessName: body.businessName,
+      category: body.category,
+      contacts: body.contacts,
+      communicationPreference: body.communicationPreference,
+      communicationNotes: body.communicationNotes,
+      services: body.services,
+      serviceArea: body.serviceArea,
+      email: body.email || undefined,
+      websiteUrl: body.websiteUrl || undefined,
+      notes: body.notes
+    });
+
+    return c.json({ submission }, 201);
   });
 
   app.use("/v1/*", authMiddleware);
@@ -790,6 +841,29 @@ export function createApp() {
 
   app.get("/v1/staff/providers", requireRoles("owner", "assistant"), async (c) => {
     return c.json({ providers: await listActiveProviders() });
+  });
+
+  app.get("/v1/staff/referrals", requireRoles("owner", "assistant"), async (c) => {
+    const statusParam = c.req.query("status");
+    const status = statusParam
+      ? z.enum(["pending", "reviewed", "archived"]).parse(statusParam)
+      : undefined;
+    return c.json({ submissions: await listReferralSubmissions(status) });
+  });
+
+  app.patch("/v1/staff/referrals/:id", requireRoles("owner", "assistant"), async (c) => {
+    const body = z
+      .object({ status: z.enum(["reviewed", "archived"]) })
+      .parse(await c.req.json());
+    const authUser = c.get("user");
+    const user = await upsertUserFromAuth(authUser);
+    const submission = await updateReferralSubmissionStatus({
+      id: c.req.param("id"),
+      status: body.status,
+      reviewedByUserId: user.id
+    });
+    if (!submission) return c.json({ error: "Submission not found" }, 404);
+    return c.json({ submission });
   });
 
   app.post("/v1/staff/clients/:id/claim", requireRoles("owner", "assistant"), async (c) => {

@@ -85,6 +85,7 @@ export function AdminNav() {
     { href: "/staff", label: "Dashboard" },
     { href: "/staff/clients", label: "Clients" },
     { href: "/staff/team", label: "Team" },
+    { href: "/staff/referrals", label: "Referrals" },
     { href: "/staff/documents", label: "Document Queue" },
     { href: "/staff/tasks", label: "Tasks" },
     { href: "/staff/messages", label: "Messages" },

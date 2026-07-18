@@ -244,6 +244,12 @@ exports.handler = async (event) => {
       integration: new apigwIntegrations.HttpLambdaIntegration("InvitePreviewIntegration", apiFunction)
     });
 
+    httpApi.addRoutes({
+      path: "/v1/referrals",
+      methods: [apigwv2.HttpMethod.POST],
+      integration: new apigwIntegrations.HttpLambdaIntegration("ReferralSubmitIntegration", apiFunction)
+    });
+
     new cdk.CfnOutput(this, "ApiUrl", { value: httpApi.apiEndpoint });
     new cdk.CfnOutput(this, "UserPoolId", { value: userPool.userPoolId });
     new cdk.CfnOutput(this, "UserPoolClientId", { value: userPoolClient.userPoolClientId });

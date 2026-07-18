@@ -307,3 +307,44 @@ export const providerInvites = pgTable("provider_invites", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
 });
+
+export const referralCategoryEnum = pgEnum("referral_category", [
+  "realtor",
+  "attorney",
+  "educator",
+  "developer",
+  "other"
+]);
+
+export const referralSubmissionStatusEnum = pgEnum("referral_submission_status", [
+  "pending",
+  "reviewed",
+  "archived"
+]);
+
+export const referralCommunicationPreferenceEnum = pgEnum("referral_communication_preference", [
+  "text",
+  "call",
+  "either"
+]);
+
+export const referralSubmissions = pgTable("referral_submissions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  businessName: varchar("business_name", { length: 200 }).notNull(),
+  category: referralCategoryEnum("category").notNull(),
+  contacts: jsonb("contacts").$type<Array<{ name: string; phone: string }>>().notNull().default([]),
+  communicationPreference: referralCommunicationPreferenceEnum("communication_preference")
+    .notNull()
+    .default("either"),
+  communicationNotes: text("communication_notes"),
+  services: jsonb("services").$type<string[]>().notNull().default([]),
+  serviceArea: text("service_area").notNull(),
+  email: varchar("email", { length: 320 }),
+  websiteUrl: varchar("website_url", { length: 500 }),
+  notes: text("notes"),
+  disclaimerAcceptedAt: timestamp("disclaimer_accepted_at", { withTimezone: true }).notNull(),
+  status: referralSubmissionStatusEnum("status").notNull().default("pending"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+  reviewedByUserId: uuid("reviewed_by_user_id").references(() => userAccounts.id)
+});
