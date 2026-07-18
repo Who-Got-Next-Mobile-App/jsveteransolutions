@@ -10,7 +10,8 @@ export const servicePackages: ServicePackage[] = [
     id: "pathfinder",
     name: "Pathfinder Session",
     price: "$100",
-    description: "1-hour group info session with an overview of VA claims and live Q&A."
+    description:
+      "One-time enrollment in our 1-hour group info session (held once a month) covering VA claims basics and live Q&A."
   },
   {
     id: "compass",

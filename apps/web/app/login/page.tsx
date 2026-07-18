@@ -72,8 +72,8 @@ function LoginContent() {
           </h1>
           <p className="mt-2 text-slate-600">
             {portal === "staff"
-              ? "Secure access for claim consultants and care-team providers."
-              : "Secure access to your documents and claim progress."}
+              ? "Continue with a passkey or email one-time code. No password is required."
+              : "Continue with a passkey or email one-time code to access your documents and claim progress. No password is required."}
           </p>
           {upgraded && (
             <p className="mt-2 text-sm text-emerald-700">
@@ -87,7 +87,7 @@ function LoginContent() {
           {cognitoEnabled && (
             <div className="space-y-3">
               <button type="button" onClick={handleCognitoLogin} className="btn-primary w-full">
-                Continue with secure login
+                Continue with passkey or email code
               </button>
               {portal === "client" && (
                 <button type="button" onClick={handleCognitoSignup} className="btn-outline w-full">
@@ -99,7 +99,9 @@ function LoginContent() {
                   New providers need an invite link from the team. Ask an existing provider to invite you.
                 </p>
               )}
-              <p className="mt-2 text-center text-xs text-slate-500">Amazon Cognito email sign-in</p>
+              <p className="mt-2 text-center text-xs text-slate-500">
+                Passwordless sign-in via Amazon Cognito — passkey preferred, email code as fallback
+              </p>
             </div>
           )}
 
@@ -143,11 +145,11 @@ function LoginContent() {
           </Link>
           {portal === "staff" ? (
             <Link href="/login?portal=client" className="hover:text-slate-800">
-              Client login
+              Client Portal
             </Link>
           ) : (
             <Link href="/login?portal=staff" className="hover:text-slate-800">
-              Staff login
+              Provider Portal
             </Link>
           )}
         </div>

@@ -93,11 +93,26 @@ exports.handler = async (event) => {
       timeout: cdk.Duration.seconds(10)
     });
 
+    const cognitoDomainPrefix = `jsvs-auth-${this.account}`;
+    const cognitoHostedDomain = `${cognitoDomainPrefix}.auth.${this.region}.amazoncognito.com`;
+
     const userPool = new cognito.UserPool(this, "UserPool", {
       userPoolName: "jsvs-users",
       selfSignUpEnabled: true,
       signInAliases: { email: true },
       autoVerify: { email: true },
+      featurePlan: cognito.FeaturePlan.ESSENTIALS,
+      // Cognito requires PASSWORD in AllowedFirstAuthFactors; passwordless sign-in is
+      // EMAIL_OTP + WEB_AUTHN via ALLOW_USER_AUTH. App client does not enable SRP/password flows.
+      signInPolicy: {
+        allowedFirstAuthFactors: {
+          password: true,
+          emailOtp: true,
+          passkey: true
+        }
+      },
+      passkeyRelyingPartyId: cognitoHostedDomain,
+      passkeyUserVerification: cognito.PasskeyUserVerification.REQUIRED,
       passwordPolicy: {
         minLength: 12,
         requireLowercase: true,
@@ -119,11 +134,12 @@ exports.handler = async (event) => {
     );
 
     const userPoolDomain = userPool.addDomain("AuthDomain", {
-      cognitoDomain: { domainPrefix: `jsvs-auth-${this.account}` }
+      cognitoDomain: { domainPrefix: cognitoDomainPrefix },
+      managedLoginVersion: cognito.ManagedLoginVersion.NEWER_MANAGED_LOGIN
     });
 
     const userPoolClient = userPool.addClient("WebClient", {
-      authFlows: { userSrp: true },
+      authFlows: { user: true },
       oAuth: {
         flows: { authorizationCodeGrant: true },
         scopes: [cognito.OAuthScope.OPENID, cognito.OAuthScope.EMAIL, cognito.OAuthScope.PROFILE],
@@ -143,6 +159,14 @@ exports.handler = async (event) => {
         ]
       }
     });
+
+    const managedLoginBranding = new cognito.CfnManagedLoginBranding(this, "ManagedLoginBranding", {
+      userPoolId: userPool.userPoolId,
+      clientId: userPoolClient.userPoolClientId,
+      useCognitoProvidedValues: true
+    });
+    managedLoginBranding.node.addDependency(userPoolDomain);
+    managedLoginBranding.node.addDependency(userPoolClient);
 
     for (const group of ["client", "assistant", "owner"]) {
       new cognito.CfnUserPoolGroup(this, `${group}Group`, {

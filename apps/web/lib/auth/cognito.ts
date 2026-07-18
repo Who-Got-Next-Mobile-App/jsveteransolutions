@@ -144,3 +144,17 @@ export function cognitoLogoutUrl() {
 
   return `https://${domain}/logout?${params.toString()}`;
 }
+
+/** Opens Cognito Managed Login passkey registration after an authenticated session. */
+export function cognitoManagePasskeyUrl() {
+  const domain = process.env.NEXT_PUBLIC_COGNITO_DOMAIN;
+  const clientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID;
+  if (!domain || !clientId) return null;
+
+  const params = new URLSearchParams({
+    client_id: clientId,
+    redirect_uri: cognitoRedirectUri()
+  });
+
+  return `https://${domain}/passkeys/add?${params.toString()}`;
+}

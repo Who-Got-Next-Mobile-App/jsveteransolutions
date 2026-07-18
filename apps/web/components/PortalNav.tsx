@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useAuth } from "@/lib/auth/AuthProvider";
+import { cognitoManagePasskeyUrl, isCognitoConfigured } from "@/lib/auth/cognito";
 
 interface NavLink {
   href: string;
@@ -10,6 +11,8 @@ interface NavLink {
 
 function SidebarUser({ variant }: { variant: "portal" | "staff" }) {
   const { session, logout } = useAuth();
+  const managePasskeyUrl = isCognitoConfigured() ? cognitoManagePasskeyUrl() : null;
+  const showPasskeyLink = session?.mode === "cognito" && managePasskeyUrl;
 
   return (
     <div className={`mt-8 border-t pt-4 ${variant === "staff" ? "border-white/10" : "border-slate-200"}`}>
@@ -18,6 +21,14 @@ function SidebarUser({ variant }: { variant: "portal" | "staff" }) {
           <div className="font-medium">{session.displayName}</div>
           <div className="capitalize">{session.role === "assistant" ? "provider" : session.role}</div>
         </div>
+      )}
+      {showPasskeyLink && (
+        <a
+          href={managePasskeyUrl}
+          className={`mb-3 block text-sm ${variant === "staff" ? "text-slate-400 hover:text-white" : "text-slate-500 hover:text-slate-800"}`}
+        >
+          Manage passkey
+        </a>
       )}
       <button
         type="button"

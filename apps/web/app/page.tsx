@@ -32,6 +32,38 @@ export default function HomePage() {
               <Link href="/login?portal=client" className="btn-secondary">
                 Client Portal
               </Link>
+              <Link href="/login?portal=staff" className="btn-secondary">
+                Provider Portal
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-white py-14">
+        <div className="mx-auto max-w-6xl px-4">
+          <h2 className="text-2xl font-bold text-[var(--navy-900)]">Secure portals</h2>
+          <p className="mt-2 max-w-2xl text-slate-600">
+            Sign in with a passkey or email one-time code — no password required. Choose the portal that matches your role.
+          </p>
+          <div className="mt-8 grid gap-6 md:grid-cols-2">
+            <div className="card">
+              <h3 className="text-lg font-bold text-[var(--navy-900)]">Client Portal</h3>
+              <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                Track claim progress, upload documents, complete tasks, message your care team, and manage appointments.
+              </p>
+              <Link href="/login?portal=client" className="btn-outline mt-4 text-sm">
+                Enter Client Portal
+              </Link>
+            </div>
+            <div className="card">
+              <h3 className="text-lg font-bold text-[var(--navy-900)]">Provider Portal</h3>
+              <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                Invite-only access for claim consultants to manage caseload, documents, tasks, messages, and team invites.
+              </p>
+              <Link href="/login?portal=staff" className="btn-outline mt-4 text-sm">
+                Enter Provider Portal
+              </Link>
             </div>
           </div>
         </div>
@@ -40,8 +72,8 @@ export default function HomePage() {
       <section className="mx-auto max-w-6xl px-4 py-16">
         <h2 className="text-2xl font-bold text-[var(--navy-900)]">Veteran Service Packages</h2>
         <p className="mt-2 max-w-2xl text-slate-600">
-          Personalized packages from a monthly group session to full-service support with appraisal reports, claims
-          plans, organized deliverables, and mock C&amp;P exam preparation.
+          Personalized packages from a one-time seat in our monthly group session to full-service support with appraisal
+          reports, claims plans, organized deliverables, and mock C&amp;P exam preparation.
         </p>
         <div className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {servicePackages.map((service) => (
