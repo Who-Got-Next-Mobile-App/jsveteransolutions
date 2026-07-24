@@ -47,7 +47,12 @@ async function persistPkce(verifier: string, redirectUri: string) {
   }
 }
 
-async function beginHostedLogin(extraParams?: Record<string, string>) {
+type HostedLoginOptions = {
+  /** Cognito Managed Login path. Signup must use /signup — screen_hint is not supported. */
+  path?: "oauth2/authorize" | "signup";
+};
+
+async function beginHostedLogin(options: HostedLoginOptions = {}) {
   const domain = process.env.NEXT_PUBLIC_COGNITO_DOMAIN;
   const clientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID;
   if (!domain || !clientId) throw new Error("Cognito is not configured");
@@ -70,19 +75,20 @@ async function beginHostedLogin(extraParams?: Record<string, string>) {
     scope: "openid email profile",
     redirect_uri: redirectUri,
     code_challenge: challenge,
-    code_challenge_method: "S256",
-    ...extraParams
+    code_challenge_method: "S256"
   });
 
-  window.location.href = `https://${domain}/oauth2/authorize?${params.toString()}`;
+  const path = options.path ?? "oauth2/authorize";
+  window.location.href = `https://${domain}/${path}?${params.toString()}`;
 }
 
 export async function startCognitoLogin() {
-  await beginHostedLogin();
+  await beginHostedLogin({ path: "oauth2/authorize" });
 }
 
 export async function startCognitoSignup() {
-  await beginHostedLogin({ screen_hint: "signup" });
+  // Managed Login signup page — same OAuth/PKCE params as authorize.
+  await beginHostedLogin({ path: "signup" });
 }
 
 const exchangeByCode = new Map<string, Promise<AuthSession>>();

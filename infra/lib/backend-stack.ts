@@ -140,6 +140,8 @@ exports.handler = async (event) => {
 
     const userPoolClient = userPool.addClient("WebClient", {
       authFlows: { user: true },
+      // Email OTP signup can take several minutes; Cognito default is only 3.
+      authSessionValidity: cdk.Duration.minutes(15),
       oAuth: {
         flows: { authorizationCodeGrant: true },
         scopes: [cognito.OAuthScope.OPENID, cognito.OAuthScope.EMAIL, cognito.OAuthScope.PROFILE],

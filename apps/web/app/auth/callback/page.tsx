@@ -16,13 +16,20 @@ function CallbackContent() {
   const [message, setMessage] = useState("Completing secure sign-in...");
   const started = useRef(false);
   const code = searchParams.get("code");
+  const oauthError = searchParams.get("error");
+  const oauthErrorDescription = searchParams.get("error_description");
 
   useEffect(() => {
     if (started.current) return;
     started.current = true;
 
+    if (oauthError) {
+      setError(oauthErrorDescription?.replace(/\+/g, " ") || oauthError);
+      return;
+    }
+
     if (!code) {
-      setError("Missing authorization code.");
+      setError("Missing authorization code. Start again from Create client account or Sign in.");
       return;
     }
 
@@ -61,7 +68,7 @@ function CallbackContent() {
       .catch((err) => {
         setError(err instanceof Error ? err.message : "Authentication failed");
       });
-  }, [code, router]);
+  }, [code, oauthError, oauthErrorDescription, router]);
 
   if (error) {
     return (
