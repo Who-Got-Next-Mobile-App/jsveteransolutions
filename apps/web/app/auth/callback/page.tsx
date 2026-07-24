@@ -15,12 +15,12 @@ function CallbackContent() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState("Completing secure sign-in...");
   const started = useRef(false);
+  const code = searchParams.get("code");
 
   useEffect(() => {
     if (started.current) return;
     started.current = true;
 
-    const code = searchParams.get("code");
     if (!code) {
       setError("Missing authorization code.");
       return;
@@ -30,7 +30,15 @@ function CallbackContent() {
       .then(async (session) => {
         saveSession(session);
         setApiSession(session);
-        await apiFetch("/v1/session/bootstrap", { method: "POST", body: "{}" });
+        try {
+          await apiFetch("/v1/session/bootstrap", { method: "POST", body: "{}" });
+        } catch (err) {
+          throw new Error(
+            err instanceof Error
+              ? `Signed in, but portal setup failed: ${err.message}`
+              : "Signed in, but portal setup failed"
+          );
+        }
 
         const inviteToken = loadPendingInviteToken();
         if (inviteToken) {
@@ -53,7 +61,7 @@ function CallbackContent() {
       .catch((err) => {
         setError(err instanceof Error ? err.message : "Authentication failed");
       });
-  }, [router, searchParams]);
+  }, [code, router]);
 
   if (error) {
     return (

@@ -63,7 +63,7 @@ function writePkceCookie(value: string) {
 function readPkceCookie() {
   if (typeof document === "undefined") return null;
   const prefix = `${PKCE_COOKIE}=`;
-  const match = document.cookie.split("; ").find((part) => part.startsWith(prefix));
+  const match = document.cookie.split(/;\s*/).find((part) => part.startsWith(prefix));
   if (!match) return null;
   try {
     return decodeURIComponent(match.slice(prefix.length));
@@ -82,11 +82,17 @@ function clearPkceCookie() {
 export function savePkceState(state: PkceState) {
   const raw = JSON.stringify(state);
   sessionStore()?.setItem(PKCE_KEY, raw);
+  if (typeof window !== "undefined") {
+    window.localStorage.setItem(PKCE_KEY, raw);
+  }
   writePkceCookie(raw);
 }
 
 export function loadPkceState(): PkceState | null {
-  const raw = sessionStore()?.getItem(PKCE_KEY) ?? readPkceCookie();
+  const raw =
+    sessionStore()?.getItem(PKCE_KEY) ??
+    (typeof window !== "undefined" ? window.localStorage.getItem(PKCE_KEY) : null) ??
+    readPkceCookie();
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw) as PkceState;
@@ -118,6 +124,9 @@ export function loadPkceVerifier() {
 
 export function clearPkceVerifier() {
   sessionStore()?.removeItem(PKCE_KEY);
+  if (typeof window !== "undefined") {
+    window.localStorage.removeItem(PKCE_KEY);
+  }
   clearPkceCookie();
 }
 

@@ -1,4 +1,4 @@
-import { clearPkceVerifier, loadPkceState, savePkceState } from "./storage";
+import { clearPkceVerifier, savePkceState } from "./storage";
 import type { AuthSession } from "./types";
 
 function base64UrlEncode(bytes: Uint8Array) {
@@ -23,40 +23,46 @@ export function isCognitoConfigured() {
   );
 }
 
+/** Always use apex in production so www redirects don't break OAuth state. */
 export function cognitoRedirectUri() {
   if (typeof window === "undefined") return "";
+  const host = window.location.hostname;
+  if (host === "jsveteransolutions.com" || host === "www.jsveteransolutions.com") {
+    return "https://jsveteransolutions.com/auth/callback";
+  }
   return `${window.location.origin}/auth/callback`;
 }
 
-export async function startCognitoLogin() {
-  const domain = process.env.NEXT_PUBLIC_COGNITO_DOMAIN;
-  const clientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID;
-  if (!domain || !clientId) throw new Error("Cognito is not configured");
-
-  const { verifier, challenge } = await createPkcePair();
-  const redirectUri = cognitoRedirectUri();
+async function persistPkce(verifier: string, redirectUri: string) {
   savePkceState({ verifier, redirectUri });
-
-  const params = new URLSearchParams({
-    client_id: clientId,
-    response_type: "code",
-    scope: "openid email profile",
-    redirect_uri: redirectUri,
-    code_challenge: challenge,
-    code_challenge_method: "S256"
+  // httpOnly cookie survives storage wipes and is used by the server token route.
+  const response = await fetch("/api/auth/pkce", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "same-origin",
+    body: JSON.stringify({ verifier, redirectUri })
   });
-
-  window.location.href = `https://${domain}/oauth2/authorize?${params.toString()}`;
+  if (!response.ok) {
+    throw new Error("Unable to start secure sign-in. Please try again.");
+  }
 }
 
-export async function startCognitoSignup() {
+async function beginHostedLogin(extraParams?: Record<string, string>) {
   const domain = process.env.NEXT_PUBLIC_COGNITO_DOMAIN;
   const clientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID;
   if (!domain || !clientId) throw new Error("Cognito is not configured");
 
+  // Canonicalize off www before Cognito round-trip.
+  if (typeof window !== "undefined" && window.location.hostname === "www.jsveteransolutions.com") {
+    const next = new URL(window.location.href);
+    next.hostname = "jsveteransolutions.com";
+    window.location.replace(next.toString());
+    return;
+  }
+
   const { verifier, challenge } = await createPkcePair();
   const redirectUri = cognitoRedirectUri();
-  savePkceState({ verifier, redirectUri });
+  await persistPkce(verifier, redirectUri);
 
   const params = new URLSearchParams({
     client_id: clientId,
@@ -65,78 +71,77 @@ export async function startCognitoSignup() {
     redirect_uri: redirectUri,
     code_challenge: challenge,
     code_challenge_method: "S256",
-    screen_hint: "signup"
+    ...extraParams
   });
 
   window.location.href = `https://${domain}/oauth2/authorize?${params.toString()}`;
 }
 
-function roleFromGroups(groups: string[] = []) {
-  if (groups.includes("owner")) return "owner" as const;
-  if (groups.includes("assistant")) return "assistant" as const;
-  return "client" as const;
+export async function startCognitoLogin() {
+  await beginHostedLogin();
 }
 
-function decodeJwtPayload(token: string) {
-  const [, payload] = token.split(".");
-  if (!payload) throw new Error("Invalid token");
-  const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
-  const padded = normalized.padEnd(normalized.length + ((4 - (normalized.length % 4)) % 4), "=");
-  return JSON.parse(atob(padded)) as Record<string, unknown>;
+export async function startCognitoSignup() {
+  await beginHostedLogin({ screen_hint: "signup" });
 }
+
+const exchangeByCode = new Map<string, Promise<AuthSession>>();
 
 export async function completeCognitoLogin(code: string): Promise<AuthSession> {
-  const domain = process.env.NEXT_PUBLIC_COGNITO_DOMAIN;
-  const clientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID;
-  const pkce = loadPkceState();
-  if (!domain || !clientId || !pkce?.verifier) {
-    throw new Error("Cognito login state missing. Start sign-in again from this site.");
+  const existing = exchangeByCode.get(code);
+  if (existing) return existing;
+
+  const promise = (async () => {
+    const response = await fetch("/api/auth/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify({ code, redirectUri: cognitoRedirectUri() })
+    });
+
+    clearPkceVerifier();
+
+    const payload = (await response.json().catch(() => ({}))) as {
+      error?: string;
+      detail?: string;
+      mode?: AuthSession["mode"];
+      sub?: string;
+      email?: string;
+      role?: AuthSession["role"];
+      displayName?: string;
+      idToken?: string;
+      accessToken?: string;
+      expiresAt?: number;
+    };
+
+    if (!response.ok) {
+      const detail = payload.detail ? ` (${payload.detail})` : "";
+      throw new Error(`${payload.error ?? "Sign-in failed"}${detail}`);
+    }
+
+    if (!payload.sub || !payload.email || !payload.role || !payload.idToken || !payload.accessToken) {
+      throw new Error("Sign-in response was incomplete");
+    }
+
+    return {
+      mode: "cognito",
+      sub: payload.sub,
+      email: payload.email,
+      role: payload.role,
+      displayName: payload.displayName ?? payload.email.split("@")[0],
+      idToken: payload.idToken,
+      accessToken: payload.accessToken,
+      expiresAt: payload.expiresAt
+    } satisfies AuthSession;
+  })();
+
+  exchangeByCode.set(code, promise);
+  try {
+    return await promise;
+  } catch (error) {
+    exchangeByCode.delete(code);
+    throw error;
   }
-
-  // Must match the redirect_uri used when the authorization code was issued.
-  const redirectUri = pkce.redirectUri || cognitoRedirectUri();
-
-  const body = new URLSearchParams({
-    grant_type: "authorization_code",
-    client_id: clientId,
-    code,
-    redirect_uri: redirectUri,
-    code_verifier: pkce.verifier
-  });
-
-  const response = await fetch(`https://${domain}/oauth2/token`, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body
-  });
-
-  clearPkceVerifier();
-
-  if (!response.ok) {
-    throw new Error("Cognito token exchange failed");
-  }
-
-  const tokens = (await response.json()) as {
-    id_token: string;
-    access_token: string;
-    expires_in: number;
-  };
-
-  const payload = decodeJwtPayload(tokens.id_token);
-  const groups = (payload["cognito:groups"] as string[] | undefined) ?? [];
-  const email = (payload.email as string | undefined) ?? "unknown@example.com";
-  const displayName = (payload.name as string | undefined) ?? email.split("@")[0];
-
-  return {
-    mode: "cognito",
-    sub: payload.sub as string,
-    email,
-    role: roleFromGroups(groups),
-    displayName,
-    idToken: tokens.id_token,
-    accessToken: tokens.access_token,
-    expiresAt: Date.now() + tokens.expires_in * 1000
-  };
 }
 
 export function cognitoLogoutUrl() {
@@ -144,9 +149,18 @@ export function cognitoLogoutUrl() {
   const clientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID;
   if (!domain || !clientId) return null;
 
+  const logoutUri =
+    typeof window !== "undefined" &&
+    (window.location.hostname === "jsveteransolutions.com" ||
+      window.location.hostname === "www.jsveteransolutions.com")
+      ? "https://jsveteransolutions.com"
+      : typeof window !== "undefined"
+        ? window.location.origin
+        : "http://localhost:3000";
+
   const params = new URLSearchParams({
     client_id: clientId,
-    logout_uri: typeof window !== "undefined" ? window.location.origin : "http://localhost:3000"
+    logout_uri: logoutUri
   });
 
   return `https://${domain}/logout?${params.toString()}`;
