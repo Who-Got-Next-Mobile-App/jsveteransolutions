@@ -1,4 +1,4 @@
-import { clearPkceVerifier, loadPkceVerifier, savePkceVerifier } from "./storage";
+import { clearPkceVerifier, loadPkceState, savePkceState } from "./storage";
 import type { AuthSession } from "./types";
 
 function base64UrlEncode(bytes: Uint8Array) {
@@ -34,13 +34,14 @@ export async function startCognitoLogin() {
   if (!domain || !clientId) throw new Error("Cognito is not configured");
 
   const { verifier, challenge } = await createPkcePair();
-  savePkceVerifier(verifier);
+  const redirectUri = cognitoRedirectUri();
+  savePkceState({ verifier, redirectUri });
 
   const params = new URLSearchParams({
     client_id: clientId,
     response_type: "code",
     scope: "openid email profile",
-    redirect_uri: cognitoRedirectUri(),
+    redirect_uri: redirectUri,
     code_challenge: challenge,
     code_challenge_method: "S256"
   });
@@ -54,13 +55,14 @@ export async function startCognitoSignup() {
   if (!domain || !clientId) throw new Error("Cognito is not configured");
 
   const { verifier, challenge } = await createPkcePair();
-  savePkceVerifier(verifier);
+  const redirectUri = cognitoRedirectUri();
+  savePkceState({ verifier, redirectUri });
 
   const params = new URLSearchParams({
     client_id: clientId,
     response_type: "code",
     scope: "openid email profile",
-    redirect_uri: cognitoRedirectUri(),
+    redirect_uri: redirectUri,
     code_challenge: challenge,
     code_challenge_method: "S256",
     screen_hint: "signup"
@@ -86,15 +88,20 @@ function decodeJwtPayload(token: string) {
 export async function completeCognitoLogin(code: string): Promise<AuthSession> {
   const domain = process.env.NEXT_PUBLIC_COGNITO_DOMAIN;
   const clientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID;
-  const verifier = loadPkceVerifier();
-  if (!domain || !clientId || !verifier) throw new Error("Cognito login state missing");
+  const pkce = loadPkceState();
+  if (!domain || !clientId || !pkce?.verifier) {
+    throw new Error("Cognito login state missing. Start sign-in again from this site.");
+  }
+
+  // Must match the redirect_uri used when the authorization code was issued.
+  const redirectUri = pkce.redirectUri || cognitoRedirectUri();
 
   const body = new URLSearchParams({
     grant_type: "authorization_code",
     client_id: clientId,
     code,
-    redirect_uri: cognitoRedirectUri(),
-    code_verifier: verifier
+    redirect_uri: redirectUri,
+    code_verifier: pkce.verifier
   });
 
   const response = await fetch(`https://${domain}/oauth2/token`, {

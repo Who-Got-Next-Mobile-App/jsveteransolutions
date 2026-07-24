@@ -53,6 +53,16 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   transpilePackages: ["@vsn/types"],
+  async redirects() {
+    return [
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "www.jsveteransolutions.com" }],
+        destination: "https://jsveteransolutions.com/:path*",
+        permanent: true
+      }
+    ];
+  },
   async headers() {
     return [
       {

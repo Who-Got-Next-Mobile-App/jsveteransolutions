@@ -2,6 +2,7 @@ import type { AuthSession } from "./types";
 
 const SESSION_KEY = "jsvs.auth.session";
 const PKCE_KEY = "jsvs.auth.pkce";
+const PKCE_COOKIE = "jsvs_pkce";
 
 /** Browser-session only — closing the tab/window clears auth tokens. */
 function sessionStore() {
@@ -38,16 +39,86 @@ export function clearSession() {
   }
 }
 
+export interface PkceState {
+  verifier: string;
+  redirectUri: string;
+}
+
+function cookieDomainAttribute() {
+  if (typeof window === "undefined") return "";
+  const host = window.location.hostname;
+  // Share PKCE across apex and www so Cognito callbacks don't lose login state.
+  if (host === "jsveteransolutions.com" || host.endsWith(".jsveteransolutions.com")) {
+    return "; Domain=.jsveteransolutions.com";
+  }
+  return "";
+}
+
+function writePkceCookie(value: string) {
+  if (typeof document === "undefined") return;
+  const maxAge = 60 * 20; // 20 minutes covers Managed Login + passkey prompts
+  document.cookie = `${PKCE_COOKIE}=${encodeURIComponent(value)}; Path=/; Max-Age=${maxAge}; SameSite=Lax; Secure${cookieDomainAttribute()}`;
+}
+
+function readPkceCookie() {
+  if (typeof document === "undefined") return null;
+  const prefix = `${PKCE_COOKIE}=`;
+  const match = document.cookie.split("; ").find((part) => part.startsWith(prefix));
+  if (!match) return null;
+  try {
+    return decodeURIComponent(match.slice(prefix.length));
+  } catch {
+    return null;
+  }
+}
+
+function clearPkceCookie() {
+  if (typeof document === "undefined") return;
+  document.cookie = `${PKCE_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax; Secure${cookieDomainAttribute()}`;
+  // Also clear host-only variants that may have been written earlier.
+  document.cookie = `${PKCE_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax; Secure`;
+}
+
+export function savePkceState(state: PkceState) {
+  const raw = JSON.stringify(state);
+  sessionStore()?.setItem(PKCE_KEY, raw);
+  writePkceCookie(raw);
+}
+
+export function loadPkceState(): PkceState | null {
+  const raw = sessionStore()?.getItem(PKCE_KEY) ?? readPkceCookie();
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as PkceState;
+    if (!parsed?.verifier || !parsed?.redirectUri) return null;
+    return parsed;
+  } catch {
+    // Legacy builds stored a bare verifier string.
+    if (raw.length > 16 && !raw.startsWith("{")) {
+      return {
+        verifier: raw,
+        redirectUri: typeof window !== "undefined" ? `${window.location.origin}/auth/callback` : ""
+      };
+    }
+    return null;
+  }
+}
+
+/** @deprecated Prefer savePkceState — kept for call-site clarity during transition. */
 export function savePkceVerifier(verifier: string) {
-  sessionStore()?.setItem(PKCE_KEY, verifier);
+  savePkceState({
+    verifier,
+    redirectUri: typeof window !== "undefined" ? `${window.location.origin}/auth/callback` : ""
+  });
 }
 
 export function loadPkceVerifier() {
-  return sessionStore()?.getItem(PKCE_KEY) ?? null;
+  return loadPkceState()?.verifier ?? null;
 }
 
 export function clearPkceVerifier() {
   sessionStore()?.removeItem(PKCE_KEY);
+  clearPkceCookie();
 }
 
 const INVITE_KEY = "jsvs.provider.invite";

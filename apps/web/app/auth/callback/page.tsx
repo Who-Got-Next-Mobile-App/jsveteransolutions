@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { portalHomeForRole } from "@/lib/auth/AuthProvider";
@@ -14,8 +14,12 @@ function CallbackContent() {
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState("Completing secure sign-in...");
+  const started = useRef(false);
 
   useEffect(() => {
+    if (started.current) return;
+    started.current = true;
+
     const code = searchParams.get("code");
     if (!code) {
       setError("Missing authorization code.");
