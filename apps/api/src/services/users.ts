@@ -1,6 +1,7 @@
 import { and, asc, count, desc, eq, inArray, isNull, ne, or, sql } from "drizzle-orm";
 import { clientProfiles, documents, getDb, timelineEvents, userAccounts } from "@vsn/db";
 import type { ClaimStage, UserRole } from "@vsn/types";
+import { splitPersonName } from "../lib/person-name";
 import type { AuthUser } from "../types";
 
 export async function findUserBySub(sub: string) {
@@ -153,18 +154,35 @@ export async function assignClientToLeastLoadedProvider(profileId: string) {
 export async function bootstrapClientProfile(authUser: AuthUser, userAccountId: string) {
   const db = getDb();
   const existing = await findProfileByUserId(userAccountId);
-  if (existing) return existing;
+  const { firstName, lastName } = splitPersonName(authUser.displayName);
 
-  const nameParts = authUser.displayName.trim().split(/\s+/);
-  const firstName = nameParts[0] ?? "Client";
-  const lastName = nameParts.slice(1).join(" ") || "User";
+  if (existing) {
+    const looksPlaceholder =
+      existing.lastName.toLowerCase() === "user" ||
+      /[._+-]/.test(existing.firstName) ||
+      existing.firstName === existing.firstName.toLowerCase();
+
+    if (looksPlaceholder && (firstName !== existing.firstName || lastName !== existing.lastName)) {
+      const [updated] = await db
+        .update(clientProfiles)
+        .set({
+          firstName: firstName || existing.firstName,
+          lastName: lastName || existing.lastName,
+          updatedAt: new Date()
+        })
+        .where(eq(clientProfiles.id, existing.id))
+        .returning();
+      return updated ?? existing;
+    }
+    return existing;
+  }
 
   const [profile] = await db
     .insert(clientProfiles)
     .values({
       userAccountId,
       firstName,
-      lastName,
+      lastName: lastName || firstName,
       email: authUser.email,
       militaryService: {},
       claimedConditions: [],

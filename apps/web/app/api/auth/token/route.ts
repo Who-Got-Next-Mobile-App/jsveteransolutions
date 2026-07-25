@@ -5,6 +5,7 @@ import {
   parsePkceCookie,
   PKCE_HTTPONLY_COOKIE
 } from "@/lib/auth/pkce-cookie";
+import { displayNameFromClaims } from "@/lib/person-name";
 
 function roleFromGroups(groups: string[] = []) {
   if (groups.includes("owner")) return "owner" as const;
@@ -90,7 +91,12 @@ export async function POST(request: Request) {
   const payload = decodeJwtPayload(tokens.id_token);
   const groups = (payload["cognito:groups"] as string[] | undefined) ?? [];
   const email = (payload.email as string | undefined) ?? "unknown@example.com";
-  const displayName = (payload.name as string | undefined) ?? email.split("@")[0];
+  const displayName = displayNameFromClaims({
+    name: payload.name as string | undefined,
+    givenName: payload.given_name as string | undefined,
+    familyName: payload.family_name as string | undefined,
+    email
+  });
 
   const response = NextResponse.json({
     mode: "cognito",

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { cognitoManagePasskeyUrl, isCognitoConfigured } from "@/lib/auth/cognito";
+import { formatSessionDisplayName } from "@/lib/person-name";
 
 interface NavLink {
   href: string;
@@ -13,12 +14,15 @@ function SidebarUser({ variant }: { variant: "portal" | "staff" }) {
   const { session, logout } = useAuth();
   const managePasskeyUrl = isCognitoConfigured() ? cognitoManagePasskeyUrl() : null;
   const showPasskeyLink = session?.mode === "cognito" && managePasskeyUrl;
+  const displayName = session
+    ? formatSessionDisplayName(session.displayName, session.email)
+    : "";
 
   return (
     <div className={`mt-8 border-t pt-4 ${variant === "staff" ? "border-white/10" : "border-slate-200"}`}>
       {session && (
         <div className={`mb-3 text-xs ${variant === "staff" ? "text-slate-400" : "text-slate-500"}`}>
-          <div className="font-medium">{session.displayName}</div>
+          <div className="font-medium">{displayName}</div>
           <div className="capitalize">{session.role === "assistant" ? "provider" : session.role}</div>
         </div>
       )}

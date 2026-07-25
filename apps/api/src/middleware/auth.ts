@@ -2,6 +2,7 @@ import { CognitoJwtVerifier } from "aws-jwt-verify";
 import type { Context, Next } from "hono";
 import type { UserRole } from "@vsn/types";
 import type { AuthUser } from "../types";
+import { displayNameFromClaims } from "../lib/person-name";
 
 function isDevBypass() {
   return process.env.DEV_AUTH_BYPASS === "true";
@@ -61,7 +62,12 @@ export async function authMiddleware(c: Context, next: Next) {
     const payload = await jwtVerifier.verify(token);
     const groups = (payload["cognito:groups"] as string[] | undefined) ?? [];
     const email = (payload.email as string | undefined) ?? "unknown@example.com";
-    const displayName = (payload.name as string | undefined) ?? email.split("@")[0];
+    const displayName = displayNameFromClaims({
+      name: payload.name as string | undefined,
+      givenName: payload.given_name as string | undefined,
+      familyName: payload.family_name as string | undefined,
+      email
+    });
 
     c.set("user", {
       sub: payload.sub,
