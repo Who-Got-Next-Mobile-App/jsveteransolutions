@@ -122,7 +122,7 @@ export default function ReferralApplyPage() {
                 value={businessName}
                 onChange={(e) => setBusinessName(e.target.value)}
                 className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
-                placeholder="JC Osto Lawn Care Service"
+                placeholder="Example (demo): JC Osto Lawn Care Service"
               />
             </div>
 

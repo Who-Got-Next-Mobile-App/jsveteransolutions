@@ -1,40 +1,62 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { AdminNav, StatCard } from "@/components/PortalShell";
-import { apiFetch, type DocumentsResponse, type StaffProfilesResponse, type StaffStatsResponse } from "@/lib/api";
-import { claimStageLabels } from "@/lib/claim-stages";
-import type { ClaimStage } from "@vsn/types";
+import { apiFetch, type DocumentsResponse, type StaffStatsResponse } from "@/lib/api";
+import { formatProfileName } from "@/lib/person-name";
+
+function clientDisplayName(raw?: string | null) {
+  if (!raw?.trim()) return "Unknown client";
+  const parts = raw.trim().split(/\s+/);
+  return formatProfileName(parts[0] ?? "", parts.slice(1).join(" "));
+}
+
+function groupDocumentsByClient(documents: DocumentsResponse["documents"]) {
+  const groups = new Map<string, { clientKey: string; clientName: string; docs: DocumentsResponse["documents"] }>();
+
+  for (const doc of documents) {
+    const clientKey = doc.clientProfileId ?? doc.clientName ?? "unknown";
+    const existing = groups.get(clientKey);
+    if (existing) {
+      existing.docs.push(doc);
+    } else {
+      groups.set(clientKey, {
+        clientKey,
+        clientName: clientDisplayName(doc.clientName),
+        docs: [doc]
+      });
+    }
+  }
+
+  return Array.from(groups.values()).sort((a, b) => a.clientName.localeCompare(b.clientName));
+}
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState<StaffStatsResponse["stats"] | null>(null);
-  const [profiles, setProfiles] = useState<StaffProfilesResponse["profiles"]>([]);
   const [documents, setDocuments] = useState<DocumentsResponse["documents"]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([
       apiFetch<StaffStatsResponse>("/v1/staff/stats"),
-      apiFetch<StaffProfilesResponse>("/v1/profiles"),
       apiFetch<DocumentsResponse>("/v1/staff/documents")
     ])
-      .then(([statsResponse, profilesResponse, documentsResponse]) => {
+      .then(([statsResponse, documentsResponse]) => {
         setStats(statsResponse.stats);
-        setProfiles(profilesResponse.profiles);
         setDocuments(documentsResponse.documents);
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load dashboard"));
   }, []);
 
-  const featuredClient = profiles[0];
+  const documentsByClient = useMemo(() => groupDocumentsByClient(documents), [documents]);
 
   return (
     <div className="flex min-h-screen bg-slate-100">
       <AdminNav />
       <main className="flex-1 p-6 md:p-8">
         <h1 className="text-2xl font-bold text-[var(--navy-900)]">Provider Dashboard</h1>
-        <p className="text-slate-600">Your caseload and operations — live data from the JSVS API.</p>
+        <p className="text-slate-600">Your caseload and operations overview.</p>
         {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
 
         <div className="mt-6 grid gap-4 md:grid-cols-4">
@@ -48,47 +70,38 @@ export default function AdminDashboard() {
           <StatCard label="Open Tasks" value={String(stats?.openTasks ?? "—")} />
         </div>
 
-        <div className="mt-8 grid gap-6 lg:grid-cols-2">
-          <div className="card">
-            <h2 className="font-bold">Featured Client</h2>
-            {featuredClient ? (
-              <div className="mt-4 space-y-2 text-sm">
-                <div>
-                  <span className="text-slate-500">Name:</span> {featuredClient.firstName} {featuredClient.lastName}
+        <div className="mt-8 card">
+          <h2 className="font-bold">Document Review Queue</h2>
+          <p className="mt-1 text-sm text-slate-500">Grouped by client</p>
+          <div className="mt-4 space-y-4">
+            {documentsByClient.slice(0, 6).map((group) => (
+              <div key={group.clientKey} className="border-b border-slate-100 pb-3 last:border-0">
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="text-sm font-semibold text-[var(--navy-900)]">{group.clientName}</h3>
+                  <span className="text-xs text-slate-400">
+                    {group.docs.length} document{group.docs.length === 1 ? "" : "s"}
+                  </span>
                 </div>
-                <div>
-                  <span className="text-slate-500">Email:</span> {featuredClient.email}
-                </div>
-                <div>
-                  <span className="text-slate-500">Stage:</span>{" "}
-                  {claimStageLabels[featuredClient.currentStage as ClaimStage]}
-                </div>
-                <Link href={`/staff/clients/${featuredClient.id}`} className="inline-block text-sm font-medium text-[var(--navy-800)] hover:underline">
-                  View profile →
-                </Link>
+                <ul className="mt-2 space-y-1.5 text-sm">
+                  {group.docs.slice(0, 3).map((doc) => (
+                    <li key={doc.id} className="flex justify-between gap-3">
+                      <span className="text-slate-700">{doc.title}</span>
+                      <span className="shrink-0 capitalize text-amber-600">{doc.status.replace(/_/g, " ")}</span>
+                    </li>
+                  ))}
+                  {group.docs.length > 3 && (
+                    <li className="text-xs text-slate-400">+{group.docs.length - 3} more</li>
+                  )}
+                </ul>
               </div>
-            ) : (
-              <p className="mt-4 text-sm text-slate-500">No client profiles yet. Sign in as a demo client and upload a document.</p>
+            ))}
+            {!documentsByClient.length && (
+              <p className="text-sm text-slate-500">No documents in the review queue.</p>
             )}
           </div>
-          <div className="card">
-            <h2 className="font-bold">Document Review Queue</h2>
-            <ul className="mt-4 space-y-2 text-sm">
-              {documents.slice(0, 5).map((doc) => (
-                <li key={doc.id} className="flex justify-between border-b border-slate-100 pb-2">
-                  <span>
-                    {doc.title}
-                    {doc.clientName ? ` · ${doc.clientName}` : ""}
-                  </span>
-                  <span className="capitalize text-amber-600">{doc.status.replace(/_/g, " ")}</span>
-                </li>
-              ))}
-              {!documents.length && <li className="text-slate-500">No documents in the review queue.</li>}
-            </ul>
-            <Link href="/staff/documents" className="mt-4 inline-block text-sm font-medium text-[var(--navy-800)] hover:underline">
-              Open document queue →
-            </Link>
-          </div>
+          <Link href="/staff/documents" className="mt-4 inline-block text-sm font-medium text-[var(--navy-800)] hover:underline">
+            Open document queue →
+          </Link>
         </div>
       </main>
     </div>
