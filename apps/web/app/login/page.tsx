@@ -47,7 +47,7 @@ function LoginContent() {
   async function handleCognitoLogin() {
     setError(null);
     try {
-      await startCognitoLogin();
+      await startCognitoLogin(portal === "staff" ? "staff" : "client");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to start Cognito login");
     }
@@ -72,7 +72,7 @@ function LoginContent() {
           </h1>
           <p className="mt-2 text-slate-600">
             {portal === "staff"
-              ? "Continue with a passkey or email one-time code. No password is required."
+              ? "Sign in with a passkey or email one-time code. New providers must use an invite link — this page is sign-in only."
               : "Continue with a passkey or email one-time code to access your documents and claim progress. No password is required."}
           </p>
           {upgraded && (
@@ -87,21 +87,23 @@ function LoginContent() {
           {cognitoEnabled && (
             <div className="space-y-3">
               <button type="button" onClick={handleCognitoLogin} className="btn-primary w-full">
-                Continue with passkey or email code
+                {portal === "staff" ? "Sign in" : "Sign in with passkey or email code"}
               </button>
               {portal === "client" && (
                 <button type="button" onClick={handleCognitoSignup} className="btn-outline w-full">
                   Create client account
                 </button>
               )}
-              {portal === "staff" && (
+              {portal === "staff" ? (
                 <p className="text-center text-xs text-slate-500">
-                  New providers need an invite link from the team. Ask an existing provider to invite you.
+                  Provider access is invite-only. There is no self sign-up here — use your invite link first, then sign
+                  in.
+                </p>
+              ) : (
+                <p className="mt-2 text-center text-xs text-slate-500">
+                  Passwordless sign-in via Amazon Cognito — passkey preferred, email code as fallback
                 </p>
               )}
-              <p className="mt-2 text-center text-xs text-slate-500">
-                Passwordless sign-in via Amazon Cognito — passkey preferred, email code as fallback
-              </p>
             </div>
           )}
 

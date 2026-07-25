@@ -4,7 +4,7 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { portalHomeForRole } from "@/lib/auth/AuthProvider";
-import { completeCognitoLogin } from "@/lib/auth/cognito";
+import { completeCognitoLogin, consumeLoginPortal } from "@/lib/auth/cognito";
 import { clearPendingInviteToken, clearSession, loadPendingInviteToken, saveSession } from "@/lib/auth/storage";
 import { setApiSession } from "@/lib/auth/api-session";
 import { apiFetch } from "@/lib/api";
@@ -29,9 +29,11 @@ function CallbackContent() {
     }
 
     if (!code) {
-      setError("Missing authorization code. Start again from Create client account or Sign in.");
+      setError("Missing authorization code. Start again from Sign in.");
       return;
     }
+
+    const intendedPortal = consumeLoginPortal();
 
     completeCognitoLogin(code)
       .then(async (session) => {
@@ -63,7 +65,15 @@ function CallbackContent() {
           }
         }
 
-        router.replace(portalHomeForRole(session.role));
+        if (intendedPortal === "staff" && session.role === "client") {
+          clearSession();
+          setApiSession(null);
+          throw new Error(
+            "This account is not a provider. Provider access is invite-only — ask an existing provider for an invite link, then sign in."
+          );
+        }
+
+        router.replace(portalHomeForRole(session.role, intendedPortal ?? undefined));
       })
       .catch((err) => {
         setError(err instanceof Error ? err.message : "Authentication failed");
@@ -71,12 +81,13 @@ function CallbackContent() {
   }, [code, oauthError, oauthErrorDescription, router]);
 
   if (error) {
+    const staffHint = error.toLowerCase().includes("invite");
     return (
       <div className="flex min-h-screen items-center justify-center px-4">
         <div className="card max-w-md text-center">
           <h1 className="text-xl font-bold text-[var(--navy-900)]">Sign in failed</h1>
           <p className="mt-2 text-sm text-red-600">{error}</p>
-          <Link href="/login" className="btn-primary mt-4 inline-flex">
+          <Link href={staffHint ? "/login?portal=staff" : "/login"} className="btn-primary mt-4 inline-flex">
             Try again
           </Link>
         </div>

@@ -33,8 +33,11 @@ export function cognitoRedirectUri() {
   return `${window.location.origin}/auth/callback`;
 }
 
-async function persistPkce(verifier: string, redirectUri: string) {
+async function persistPkce(verifier: string, redirectUri: string, portal?: "client" | "staff") {
   savePkceState({ verifier, redirectUri });
+  if (typeof window !== "undefined" && portal) {
+    window.sessionStorage.setItem("jsvs.auth.portal", portal);
+  }
   // httpOnly cookie survives storage wipes and is used by the server token route.
   const response = await fetch("/api/auth/pkce", {
     method: "POST",
@@ -49,7 +52,8 @@ async function persistPkce(verifier: string, redirectUri: string) {
 
 type HostedLoginOptions = {
   /** Cognito Managed Login path. Signup must use /signup — screen_hint is not supported. */
-  path?: "oauth2/authorize" | "signup";
+  path?: "oauth2/authorize" | "login" | "signup";
+  portal?: "client" | "staff";
 };
 
 async function beginHostedLogin(options: HostedLoginOptions = {}) {
@@ -67,7 +71,7 @@ async function beginHostedLogin(options: HostedLoginOptions = {}) {
 
   const { verifier, challenge } = await createPkcePair();
   const redirectUri = cognitoRedirectUri();
-  await persistPkce(verifier, redirectUri);
+  await persistPkce(verifier, redirectUri, options.portal);
 
   const params = new URLSearchParams({
     client_id: clientId,
@@ -82,13 +86,24 @@ async function beginHostedLogin(options: HostedLoginOptions = {}) {
   window.location.href = `https://${domain}/${path}?${params.toString()}`;
 }
 
-export async function startCognitoLogin() {
-  await beginHostedLogin({ path: "oauth2/authorize" });
+export async function startCognitoLogin(portal: "client" | "staff" = "client") {
+  // Provider portal: land on Cognito /login (sign-in). Client uses authorize → login.
+  await beginHostedLogin({
+    path: portal === "staff" ? "login" : "oauth2/authorize",
+    portal
+  });
 }
 
 export async function startCognitoSignup() {
-  // Managed Login signup page — same OAuth/PKCE params as authorize.
-  await beginHostedLogin({ path: "signup" });
+  // Client + invite signup only — never used for provider portal entry.
+  await beginHostedLogin({ path: "signup", portal: "client" });
+}
+
+export function consumeLoginPortal(): "client" | "staff" | null {
+  if (typeof window === "undefined") return null;
+  const value = window.sessionStorage.getItem("jsvs.auth.portal");
+  window.sessionStorage.removeItem("jsvs.auth.portal");
+  return value === "staff" || value === "client" ? value : null;
 }
 
 const exchangeByCode = new Map<string, Promise<AuthSession>>();
