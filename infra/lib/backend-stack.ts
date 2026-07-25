@@ -229,7 +229,15 @@ exports.handler = async (event) => {
 
     httpApi.addRoutes({
       path: "/{proxy+}",
-      methods: [apigwv2.HttpMethod.ANY],
+      // Do not use ANY — it captures OPTIONS and JWT-authorizes preflight (browser CORS fails).
+      // Leave OPTIONS to HttpApi corsPreflight above.
+      methods: [
+        apigwv2.HttpMethod.GET,
+        apigwv2.HttpMethod.POST,
+        apigwv2.HttpMethod.PATCH,
+        apigwv2.HttpMethod.PUT,
+        apigwv2.HttpMethod.DELETE
+      ],
       integration: new apigwIntegrations.HttpLambdaIntegration("ApiIntegration", apiFunction),
       authorizer
     });
