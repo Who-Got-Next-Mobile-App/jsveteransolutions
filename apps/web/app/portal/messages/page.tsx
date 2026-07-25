@@ -68,7 +68,7 @@ export default function PortalMessagesPage() {
       <PortalNav />
       <main className="flex-1 p-6 md:p-8">
         <h1 className="text-2xl font-bold text-[var(--navy-900)]">Messages</h1>
-        <p className="mt-2 text-slate-600">Secure portal messaging — PHI stays inside the platform.</p>
+        <p className="mt-2 text-slate-600">Message your care team securely inside the portal.</p>
         {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
 
         <div className="mt-6 grid gap-6 lg:grid-cols-2">
