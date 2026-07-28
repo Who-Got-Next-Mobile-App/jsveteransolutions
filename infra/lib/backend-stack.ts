@@ -23,6 +23,8 @@ const PRODUCTION_ORIGINS = [
   "https://www.jsveteransolutions.com"
 ];
 
+const AUTH_EMAIL_DOMAIN = "jsveteransolutions.com";
+
 export class BackendStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
@@ -96,12 +98,25 @@ exports.handler = async (event) => {
     const cognitoDomainPrefix = `jsvs-auth-${this.account}`;
     const cognitoHostedDomain = `${cognitoDomainPrefix}.auth.${this.region}.amazoncognito.com`;
 
+    // SES domain identity is managed outside CDK (DNS on Vercel). Cognito sends OTP via SES.
     const userPool = new cognito.UserPool(this, "UserPool", {
       userPoolName: "jsvs-users",
       selfSignUpEnabled: true,
       signInAliases: { email: true },
       autoVerify: { email: true },
       featurePlan: cognito.FeaturePlan.ESSENTIALS,
+      email: cognito.UserPoolEmail.withSES({
+        fromEmail: `noreply@${AUTH_EMAIL_DOMAIN}`,
+        fromName: "JS Veteran Solutions",
+        replyTo: "dr.lee@jsveteransolutions.com",
+        sesRegion: this.region,
+        sesVerifiedDomain: AUTH_EMAIL_DOMAIN
+      }),
+      userVerification: {
+        emailSubject: "Your JS Veteran Solutions verification code",
+        emailBody: "Your JS Veteran Solutions verification code is {####}",
+        emailStyle: cognito.VerificationEmailStyle.CODE
+      },
       // Cognito requires PASSWORD in AllowedFirstAuthFactors; passwordless sign-in is
       // EMAIL_OTP + WEB_AUTHN via ALLOW_USER_AUTH. App client does not enable SRP/password flows.
       signInPolicy: {
