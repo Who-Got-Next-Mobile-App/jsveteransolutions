@@ -60,6 +60,11 @@ const nextConfig: NextConfig = {
         has: [{ type: "host", value: "www.jsveteransolutions.com" }],
         destination: "https://jsveteransolutions.com/:path*",
         permanent: true
+      },
+      {
+        source: "/pricing",
+        destination: "/services",
+        permanent: true
       }
     ];
   },

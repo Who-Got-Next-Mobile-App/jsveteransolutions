@@ -19,7 +19,7 @@ function SidebarUser({ variant }: { variant: "portal" | "staff" }) {
     : "";
 
   return (
-    <div className={`mt-8 border-t pt-4 ${variant === "staff" ? "border-white/10" : "border-slate-200"}`}>
+    <div className={`shrink-0 border-t pt-4 ${variant === "staff" ? "border-white/10" : "border-slate-200"}`}>
       {session && (
         <div className={`mb-3 text-xs ${variant === "staff" ? "text-slate-400" : "text-slate-500"}`}>
           <div className="font-medium">{displayName}</div>
@@ -50,6 +50,55 @@ function SidebarUser({ variant }: { variant: "portal" | "staff" }) {
   );
 }
 
+function SidebarShell({
+  variant,
+  brandEyebrow,
+  brandTitle,
+  links
+}: {
+  variant: "portal" | "staff";
+  brandEyebrow: string;
+  brandTitle: string;
+  links: NavLink[];
+}) {
+  const isStaff = variant === "staff";
+
+  return (
+    <aside
+      className={`flex h-svh w-56 shrink-0 flex-col border-r p-4 ${
+        isStaff ? "border-slate-200 bg-[var(--navy-950)] text-slate-300" : "border-slate-200 bg-white"
+      }`}
+    >
+      <div className="mb-6 shrink-0">
+        <div
+          className={`text-xs font-semibold uppercase tracking-wide ${
+            isStaff ? "text-slate-500" : "text-slate-400"
+          }`}
+        >
+          {brandEyebrow}
+        </div>
+        <div className={`mt-1 font-bold ${isStaff ? "text-white" : "text-[var(--navy-900)]"}`}>{brandTitle}</div>
+      </div>
+      <nav className="-mx-1 flex-1 space-y-1 overflow-y-auto px-1 pb-4">
+        {links.map((link) => (
+          <Link
+            key={link.href}
+            href={link.href}
+            className={`block rounded-lg px-3 py-2 text-sm font-medium ${
+              isStaff
+                ? "hover:bg-white/10 hover:text-white"
+                : "text-slate-600 hover:bg-slate-100 hover:text-[var(--navy-900)]"
+            }`}
+          >
+            {link.label}
+          </Link>
+        ))}
+      </nav>
+      <SidebarUser variant={variant} />
+    </aside>
+  );
+}
+
 export function PortalNav() {
   const links: NavLink[] = [
     { href: "/portal", label: "Dashboard" },
@@ -63,24 +112,12 @@ export function PortalNav() {
   ];
 
   return (
-    <aside className="w-56 shrink-0 border-r border-slate-200 bg-white p-4">
-      <div className="mb-6">
-        <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">Client Portal</div>
-        <div className="mt-1 font-bold text-[var(--navy-900)]">JS Veteran Solutions</div>
-      </div>
-      <nav className="flex flex-col gap-1">
-        {links.map((link) => (
-          <Link
-            key={link.href}
-            href={link.href}
-            className="rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-[var(--navy-900)]"
-          >
-            {link.label}
-          </Link>
-        ))}
-      </nav>
-      <SidebarUser variant="portal" />
-    </aside>
+    <SidebarShell
+      variant="portal"
+      brandEyebrow="Client Portal"
+      brandTitle="JS Veteran Solutions"
+      links={links}
+    />
   );
 }
 
@@ -99,23 +136,6 @@ export function AdminNav() {
   ];
 
   return (
-    <aside className="w-56 shrink-0 border-r border-slate-200 bg-[var(--navy-950)] p-4 text-slate-300">
-      <div className="mb-6">
-        <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Provider Portal</div>
-        <div className="mt-1 font-bold text-white">Operations</div>
-      </div>
-      <nav className="flex flex-col gap-1">
-        {links.map((link) => (
-          <Link
-            key={link.href}
-            href={link.href}
-            className="rounded-lg px-3 py-2 text-sm font-medium hover:bg-white/10 hover:text-white"
-          >
-            {link.label}
-          </Link>
-        ))}
-      </nav>
-      <SidebarUser variant="staff" />
-    </aside>
+    <SidebarShell variant="staff" brandEyebrow="Provider Portal" brandTitle="Operations" links={links} />
   );
 }

@@ -8,7 +8,6 @@ import { BRAND_ASSETS, COMPANY_NAME, COMPANY_TAGLINE } from "@/lib/brand";
 const publicLinks = [
   { href: "/services", label: "Services" },
   { href: "/client-experience", label: "Client Experience" },
-  { href: "/pricing", label: "Plans & Pricing" },
   { href: "/calculators", label: "Calculators" },
   { href: "/education", label: "Academy" },
   { href: "/providers", label: "Resources" },
