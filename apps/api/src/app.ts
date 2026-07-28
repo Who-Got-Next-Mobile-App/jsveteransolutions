@@ -50,6 +50,7 @@ import {
   replyToThread,
   setThreadClosed
 } from "./services/messages";
+import { notifyProvidersOfClientMessage } from "./services/message-notifications";
 import {
   bookAvailabilitySlot,
   cancelAppointment,
@@ -511,6 +512,12 @@ export function createApp() {
       body: body.body,
       senderUserId: user.id
     });
+    // Fire-and-forget provider email (PHI-safe; no message body).
+    void notifyProvidersOfClientMessage({
+      clientProfileId: profile.id,
+      subject: body.subject,
+      isReply: false
+    }).catch((err) => console.error("provider message notify failed", err));
     return c.json(result);
   });
 
@@ -528,6 +535,11 @@ export function createApp() {
         clientProfileId: profile.id
       });
       if (!result) return c.json({ error: "Thread not found" }, 404);
+      void notifyProvidersOfClientMessage({
+        clientProfileId: profile.id,
+        subject: result.thread?.subject ?? "Secure message",
+        isReply: true
+      }).catch((err) => console.error("provider message notify failed", err));
       return c.json(result);
     } catch (error) {
       return c.json({ error: error instanceof Error ? error.message : "Unable to reply" }, 400);

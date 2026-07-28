@@ -208,7 +208,9 @@ exports.handler = async (event) => {
         AWS_NODEJS_CONNECTION_REUSE_ENABLED: "1",
         DEV_AUTH_BYPASS: "false",
         RUN_MIGRATIONS: "true",
-        CORS_ORIGIN: PRODUCTION_ORIGINS.join(",")
+        CORS_ORIGIN: PRODUCTION_ORIGINS.join(","),
+        SES_FROM_EMAIL: `noreply@${AUTH_EMAIL_DOMAIN}`,
+        APP_BASE_URL: "https://jsveteransolutions.com"
       },
       logRetention: logs.RetentionDays.ONE_MONTH
     });
@@ -217,6 +219,16 @@ exports.handler = async (event) => {
       new iam.PolicyStatement({
         actions: ["cognito-idp:AdminAddUserToGroup", "cognito-idp:AdminRemoveUserFromGroup"],
         resources: [`arn:aws:cognito-idp:${this.region}:${this.account}:userpool/*`]
+      })
+    );
+
+    apiFunction.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ["ses:SendEmail", "ses:SendRawEmail"],
+        resources: [
+          `arn:aws:ses:${this.region}:${this.account}:identity/${AUTH_EMAIL_DOMAIN}`,
+          `arn:aws:ses:${this.region}:${this.account}:identity/noreply@${AUTH_EMAIL_DOMAIN}`
+        ]
       })
     );
 
